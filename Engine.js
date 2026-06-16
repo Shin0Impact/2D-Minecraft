@@ -9,6 +9,12 @@ class GameEngine {
     this.playerHealth = this.maxHealth;
     this.isInvincible = false;
     this.invincibilityDuration = 1000;
+
+    // Track the active selected utility state
+    this.currentTool = "sword";
+
+    // Max distance (in pixels) the player can reach to mine blocks (3 blocks * 40px = 120px)
+    this.mineRange = 120;
   }
 
   init() {
@@ -36,6 +42,7 @@ class GameEngine {
     this.enemies.push(new Enemy(480, enemySpawnY, "zombie", this.world));
 
     this.renderHearts();
+    this.setupToolBelt();
 
     window.addEventListener("keydown", (e) => {
       if (!this.keysPressed[e.key]) {
@@ -48,13 +55,75 @@ class GameEngine {
     gameWindow.addEventListener("mousedown", (e) => {
       const rect = gameWindow.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
-      const playerCenter = this.player.x + this.player.width / 2;
+      const mouseY = e.clientY - rect.top;
 
+      const playerCenter = this.player.x + this.player.width / 2;
       this.player.facing = mouseX < playerCenter ? "left" : "right";
-      this.executePlayerAttack();
+
+      if (this.currentTool === "sword") {
+        this.executePlayerAttack();
+      } else {
+        this.executeEnvironmentMining(mouseX, mouseY);
+      }
     });
 
     this.tick();
+  }
+
+  setupToolBelt() {
+    const buttons = document.querySelectorAll(".tool-btn");
+    buttons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        buttons.forEach((b) => b.classList.remove("active"));
+        this.currentTool = btn.dataset.tool;
+        btn.classList.add("active");
+      });
+    });
+  }
+
+  // Dictates matching logic between specific tools and target tile strings with reach boundaries
+  executeEnvironmentMining(clickX, clickY) {
+    // 1. Find the middle points of the player character
+    const playerCenterX = this.player.x + this.player.width / 2;
+    const playerCenterY = this.player.y + this.player.height / 2;
+
+    // 2. Find the middle points of the targeted tile block
+    const tileCol = Math.floor(clickX / this.world.tileSize);
+    const tileRow = Math.floor(clickY / this.world.tileSize);
+    const tileCenterX = tileCol * this.world.tileSize + this.world.tileSize / 2;
+    const tileCenterY = tileRow * this.world.tileSize + this.world.tileSize / 2;
+
+    // 3. Calculate distance using the Pythagorean distance formula
+    const deltaX = tileCenterX - playerCenterX;
+    const deltaY = tileCenterY - playerCenterY;
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+    // Guard clause: stop evaluation immediately if the block is out of range
+    if (distance > this.mineRange) {
+      return;
+    }
+
+    const tileType = this.world.getTileTypeAt(clickX, clickY);
+    let canBreak = false;
+
+    if (
+      this.currentTool === "axe" &&
+      (tileType === "wood" || tileType === "leaves")
+    ) {
+      canBreak = true;
+    } else if (this.currentTool === "pickaxe" && tileType === "stone") {
+      canBreak = true;
+    } else if (
+      this.currentTool === "shovel" &&
+      (tileType === "grass" || tileType === "dirt")
+    ) {
+      canBreak = true;
+    }
+
+    if (canBreak) {
+      this.world.matrix[tileRow][tileCol] = "air";
+      this.world.render();
+    }
   }
 
   resolvePhysics(entity) {
@@ -101,12 +170,10 @@ class GameEngine {
       let hitSolidGround = false;
 
       for (let x of checkXPoints) {
-        // Pass true as third parameter to temporarily treat leaves as solid blocks for landing checks
         if (this.world.isTileSolidAt(x, feetY, true)) {
           let isLeaf = this.world.getTileTypeAt?.(x, feetY) === "leaves";
 
           if (isLeaf) {
-            // Evaluates falling path vector threshold against the surface boundary plane
             let priorFeetY = previousY + entity.height;
             let tileRow = Math.floor(feetY / tileSize);
             let leafTopY = tileRow * tileSize;

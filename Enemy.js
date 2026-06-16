@@ -13,11 +13,9 @@ class Enemy {
     this.facing = "left";
     this.knockbackTimer = 0;
     this.isGrounded = false;
-
     this.attackRange = 25;
     this.attackCooldown = 0;
     this.attackRate = 90;
-    // Jumping power variable matching standard tile grid acceleration
     this.jumpForce = -8;
 
     this.DOMElement = document.createElement("article");

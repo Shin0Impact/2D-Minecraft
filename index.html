@@ -6,27 +6,46 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <main
-      id="gameWindow"
+    <section
+      class="game-wrapper"
       style="
-        position: relative;
-        width: 800px;
-        height: 600px;
-        background-color: #74b9ff;
-        overflow: hidden;
+        display: flex;
+        gap: 20px;
+        justify-content: center;
+        align-items: start;
+        margin-top: 20px;
       "
     >
-      <section id="worldGrid"></section>
+      <main
+        id="gameWindow"
+        style="
+          position: relative;
+          width: 800px;
+          height: 600px;
+          background-color: #74b9ff;
+          overflow: hidden;
+          margin: 0;
+        "
+      >
+        <section id="worldGrid"></section>
 
-      <section id="heartUI"></section>
+        <section id="heartUI"></section>
 
-      <article
-        id="playerSprite"
-        style="position: absolute; width: 30px; height: 45px"
-      ></article>
+        <article
+          id="playerSprite"
+          style="position: absolute; width: 30px; height: 45px"
+        ></article>
 
-      <section id="enemyContainer"></section>
-    </main>
+        <section id="enemyContainer"></section>
+      </main>
+
+      <aside id="toolBelt">
+        <button class="tool-btn active" data-tool="sword">Sword</button>
+        <button class="tool-btn" data-tool="axe">Axe</button>
+        <button class="tool-btn" data-tool="pickaxe">Pickaxe</button>
+        <button class="tool-btn" data-tool="shovel">Shovel</button>
+      </aside>
+    </section>
 
     <script src="World.js"></script>
     <script src="Player.js"></script>

@@ -6,14 +6,13 @@ class Player {
     this.height = 45;
     this.vx = 0;
     this.vy = 0;
-    this.speed = 4;
+    this.speed = 3;
     this.gravity = 0.5;
     this.jumpForce = -10;
     this.isGrounded = false;
     this.grid = gridInstance;
     this.knockbackTimer = 0;
     this.facing = "right";
-
     this.DOMElement = document.getElementById("playerSprite");
   }
 
