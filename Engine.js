@@ -25,7 +25,12 @@ class GameEngine {
     this.renderHearts();
 
     // Bind event handlers jumping is currently broken
-    window.addEventListener("keydown", (e) => (this.keysPressed[e.key] = true));
+    window.addEventListener("keydown", (e) => {
+      // If the key wasn't already held down, flag it as a fresh press trigger
+      if (!this.keysPressed[e.key]) {
+        this.keysPressed[e.key] = "JUST_PRESSED";
+      }
+    });
     window.addEventListener("keyup", (e) => (this.keysPressed[e.key] = false));
 
     // Fire up the continuous engine loop process
@@ -98,6 +103,13 @@ class GameEngine {
     // Render positions out to the screen
     this.player.render();
     this.enemies.forEach((zombie) => zombie.render());
+
+    //held key check
+    for (let key in this.keysPressed) {
+      if (this.keysPressed[key] === "JUST_PRESSED") {
+        this.keysPressed[key] = "HELD";
+      }
+    }
 
     // Keep the frame loop cycling indefinitely which is good for movement but not jump yet
     requestAnimationFrame(() => this.tick());

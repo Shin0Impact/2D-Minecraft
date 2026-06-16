@@ -25,16 +25,20 @@ class Player {
     // Gravity
     this.vy += this.gravity;
 
-    // Jump broken
-    if ((keysPressed[" "] || keysPressed["w"]) && this.isGrounded) {
+    // Only jump if the key state was a fresh down-press this frame!
+    if (
+      (keysPressed[" "] === "JUST_PRESSED" ||
+        keysPressed["w"] === "JUST_PRESSED") &&
+      this.isGrounded
+    ) {
       this.vy = this.jumpForce;
       this.isGrounded = false;
     }
 
-    // 4. Ground Collision
+    // Ground Collision Logic
     let feetY = this.y + this.height + this.vy;
-    let leftFootX = this.x;
-    let rightFootX = this.x + this.width;
+    let leftFootX = this.x + 4; // Adding slight inward padding so bounding walls don't drag
+    let rightFootX = this.x + this.width - 4;
 
     if (
       this.grid.isTileSolidAt(leftFootX, feetY) ||
@@ -42,9 +46,11 @@ class Player {
     ) {
       this.vy = 0;
       this.isGrounded = true;
+    } else {
+      this.isGrounded = false;
     }
 
-    // Apply computed offsets to raw coordinates
+    // Apply tracking speeds
     this.x += this.vx;
     this.y += this.vy;
   }
