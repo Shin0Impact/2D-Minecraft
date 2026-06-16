@@ -66,7 +66,7 @@ class GameEngine {
     );
   }
 
-  takeDamage() {
+  takeDamage(enemy) {
     if (this.isInvincible) return;
 
     this.playerHealth--;
@@ -78,16 +78,28 @@ class GameEngine {
       this.playerHealth = this.maxHealth;
       this.player.x = 80;
       this.player.y = 100;
+      this.player.vx = 0;
+      this.player.vy = 0;
+      this.player.knockbackTimer = 0;
       this.renderHearts();
-    } else {
-      // Trigger brief immunity window on hit
-      this.isInvincible = true;
-      this.player.DOMElement.classList.add("damaged");
-      setTimeout(() => {
-        this.isInvincible = false;
-        this.player.DOMElement.classList.remove("damaged");
-      }, this.invincibilityDuration);
+      return;
     }
+
+    // 🌪️ Calculate clean knockback vector direction
+    const playerCenter = this.player.x + this.player.width / 2;
+    const enemyCenter = enemy.x + enemy.width / 2;
+    const pushDirection = playerCenter < enemyCenter ? -1 : 1;
+
+    // Apply the pushback physics impulse force
+    this.player.applyKnockback(pushDirection);
+
+    // Trigger brief immunity window on hit
+    this.isInvincible = true;
+    this.player.DOMElement.classList.add("damaged");
+    setTimeout(() => {
+      this.isInvincible = false;
+      this.player.DOMElement.classList.remove("damaged");
+    }, this.invincibilityDuration);
   }
 
   tick() {
@@ -95,9 +107,10 @@ class GameEngine {
     this.player.update(this.keysPressed, this.enemies);
     this.enemies.forEach((zombie) => zombie.update(this.player));
 
+    // Collision Check Loop
     this.enemies.forEach((enemy) => {
       if (this.checkCollision(this.player, enemy)) {
-        this.takeDamage();
+        this.takeDamage(enemy); // 🌟 Pass the enemy causing the damage here!
       }
     });
 
@@ -105,14 +118,13 @@ class GameEngine {
     this.player.render();
     this.enemies.forEach((zombie) => zombie.render());
 
-    //held key check
+    // Held key state updates
     for (let key in this.keysPressed) {
       if (this.keysPressed[key] === "JUST_PRESSED") {
         this.keysPressed[key] = "HELD";
       }
     }
 
-    // Keep the frame loop cycling indefinitely which is good for movement but not jump yet
     requestAnimationFrame(() => this.tick());
   }
 }
