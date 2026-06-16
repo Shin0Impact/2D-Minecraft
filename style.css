@@ -89,3 +89,11 @@
 .heart.empty {
   background-image: url("Assets/Heart_Empty.png");
 }
+
+.mirror-left {
+  transform: scaleX(-1);
+}
+
+.mirror-right {
+  transform: scaleX(1);
+}

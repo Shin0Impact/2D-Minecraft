@@ -12,6 +12,7 @@ class Player {
     this.isGrounded = false;
     this.grid = gridInstance; // currently broken
     this.knockbackTimer = 0;
+    this.facing = "right";
 
     this.DOMElement = document.getElementById("playerSprite");
   }
@@ -31,10 +32,13 @@ class Player {
       this.vx *= 0.92; // Gradually slow down horizontally in mid-air
     } else {
       // Horizontal movement logic based on key presses
-      if (keysPressed["d"] || keysPressed["ArrowRight"]) this.vx = this.speed;
-      else if (keysPressed["a"] || keysPressed["ArrowLeft"])
+      if (keysPressed["d"] || keysPressed["ArrowRight"]) {
+        this.vx = this.speed;
+        this.facing = "right";
+      } else if (keysPressed["a"] || keysPressed["ArrowLeft"]) {
         this.vx = -this.speed;
-      else this.vx = 0;
+        this.facing = "left";
+      } else this.vx = 0;
 
       // SOLID ENTITY CHECK
       if (this.vx !== 0) {
@@ -66,7 +70,7 @@ class Player {
       this.isGrounded = false;
     }
 
-    // 4. Ground Collision
+    // Ground Collision
     let feetY = this.y + this.height + this.vy;
     let leftFootX = this.x + 4; // Inward offset to stop edge sticking
     let rightFootX = this.x + this.width - 4;
@@ -90,5 +94,7 @@ class Player {
     // Push the updated mathematical states cleanly to CSS properties
     this.DOMElement.style.left = `${this.x}px`;
     this.DOMElement.style.top = `${this.y}px`;
+    this.DOMElement.classList.toggle("mirror-left", this.facing === "left");
+    this.DOMElement.classList.toggle("mirror-right", this.facing === "right");
   }
 }

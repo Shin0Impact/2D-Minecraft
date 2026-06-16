@@ -33,8 +33,62 @@ class GameEngine {
     });
     window.addEventListener("keyup", (e) => (this.keysPressed[e.key] = false));
 
+    // Bind Mouse Click Attack Listener
+    const gameWindow = document.getElementById("gameWindow");
+    gameWindow.addEventListener("mousedown", (e) => {
+      // Get exact coordinates of the mouse inside the game container
+      const rect = gameWindow.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+
+      // Determine click intent: did they click left or right of player's center?
+      const playerCenter = this.player.x + this.player.width / 2;
+      if (mouseX < playerCenter) {
+        this.player.facing = "left"; // instantly match intent
+      } else {
+        this.player.facing = "right";
+      }
+
+      this.executePlayerAttack();
+    });
+
     // Fire up the continuous engine loop process
     this.tick();
+  }
+
+  executePlayerAttack() {
+    console.log("Player swings!");
+
+    // Create a 40x40 square hitbox
+    const attackSize = 40;
+    let attackHitbox = {
+      x: 0,
+      y: this.player.y + (this.player.height - attackSize) / 2, // centered with torso
+      width: attackSize,
+      height: attackSize,
+    };
+
+    // Position the square in front of where the player is looking
+    if (this.player.facing === "right") {
+      attackHitbox.x = this.player.x + this.player.width; // just off right edge
+    } else {
+      attackHitbox.x = this.player.x - attackSize; // just off left edge
+    }
+
+    // Check if this attack box touches any zombies
+    for (let i = this.enemies.length - 1; i >= 0; i--) {
+      let enemy = this.enemies[i];
+      if (this.checkCollision(attackHitbox, enemy)) {
+        enemy.health--;
+        console.log(`Hit enemy! Enemy HP: ${enemy.health}`);
+
+        // If enemy HP drops to 0, vaporize them!
+        if (enemy.health <= 0) {
+          console.log("Enemy defeated!");
+          enemy.DOMElement.remove(); // clear out of DOM layout
+          this.enemies.splice(i, 1); // drop out of active arrays
+        }
+      }
+    }
   }
 
   /* Render the player's health */
@@ -85,7 +139,7 @@ class GameEngine {
       return;
     }
 
-    // 🌪️ Calculate clean knockback vector direction
+    // Calculate clean knockback vector direction
     const playerCenter = this.player.x + this.player.width / 2;
     const enemyCenter = enemy.x + enemy.width / 2;
     const pushDirection = playerCenter < enemyCenter ? -1 : 1;
@@ -110,7 +164,7 @@ class GameEngine {
     // Collision Check Loop
     this.enemies.forEach((enemy) => {
       if (this.checkCollision(this.player, enemy)) {
-        this.takeDamage(enemy); // 🌟 Pass the enemy causing the damage here!
+        this.takeDamage(enemy);
       }
     });
 
