@@ -17,9 +17,28 @@ class GameEngine {
     // Render the visual grid layout based on our data matrix
     this.world.render();
 
-    // this should be changed to a dynamic spawn system later, but for now we can hardcode a single player and enemy for testing
-    this.player = new Player(80, 100, this.world);
-    this.enemies.push(new Enemy(400, 100, "zombie", this.world));
+    let spawnRow = 0;
+    for (let r = 0; r < this.world.rows; r++) {
+      if (this.world.matrix[r][2] !== "air") {
+        spawnRow = r;
+        break;
+      }
+    }
+    // Set character position directly 1 full block length over the ground position
+    let spawnY = spawnRow * this.world.tileSize - 45;
+
+    this.player = new Player(80, spawnY, this.world);
+
+    // Spawn your zombie over on the right edge dynamically too
+    let enemySpawnRow = 0;
+    for (let r = 0; r < this.world.rows; r++) {
+      if (this.world.matrix[r][12] !== "air") {
+        enemySpawnRow = r;
+        break;
+      }
+    }
+    let enemySpawnY = enemySpawnRow * this.world.tileSize - 45;
+    this.enemies.push(new Enemy(480, enemySpawnY, "zombie", this.world));
 
     // show player hp
     this.renderHearts();
