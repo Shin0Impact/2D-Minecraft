@@ -43,7 +43,9 @@ class WorldGrid {
     for (let r = 0; r < this.rows; r++) {
       for (let c = 0; c < this.cols; c++) {
         const tileType = this.matrix[r][c];
-        const tileElement = document.createElement("span");
+
+        // Create a new HTML element for each tile and assign the appropriate class
+        const tileElement = document.createElement("section");
         tileElement.className = `tile ${tileType}`;
 
         // Save coordinates directly onto the element for easy clicking later

@@ -4,6 +4,11 @@ class GameEngine {
     this.player = null;
     this.enemies = [];
     this.keysPressed = {};
+
+    this.maxHealth = 5;
+    this.playerHealth = this.maxHealth;
+    this.isInvincible = false;
+    this.invincibilityDuration = 1000; // 1 second immunity frames after taking damage
   }
 
   init() {
@@ -16,6 +21,9 @@ class GameEngine {
     this.player = new Player(80, 100, this.world);
     this.enemies.push(new Enemy(400, 100, "zombie", this.world));
 
+    // show player hp
+    this.renderHearts();
+
     // Bind event handlers jumping is currently broken
     window.addEventListener("keydown", (e) => (this.keysPressed[e.key] = true));
     window.addEventListener("keyup", (e) => (this.keysPressed[e.key] = false));
@@ -24,10 +32,68 @@ class GameEngine {
     this.tick();
   }
 
+  /* Render the player's health */
+  renderHearts() {
+    let heartUI = document.getElementById("heartUI");
+    if (!heartUI) {
+      // Create element layout container if missing
+      heartUI = document.createElement("div");
+      heartUI.id = "heartUI";
+      document.getElementById("gameWindow").appendChild(heartUI);
+    }
+
+    heartUI.innerHTML = "";
+    for (let i = 0; i < this.maxHealth; i++) {
+      const heart = document.createElement("span");
+      heart.className = i < this.playerHealth ? "heart full" : "heart empty";
+      heartUI.appendChild(heart);
+    }
+  }
+
+  /* makes sure player and enemy dont overlap and also used for taking damage*/
+  checkCollision(rect1, rect2) {
+    return (
+      rect1.x < rect2.x + rect2.width &&
+      rect1.x + rect1.width > rect2.x &&
+      rect1.y < rect2.y + rect2.height &&
+      rect1.y + rect1.height > rect2.y
+    );
+  }
+
+  takeDamage() {
+    if (this.isInvincible) return;
+
+    this.playerHealth--;
+    this.renderHearts();
+    console.log(`Player hit! Remaining HP: ${this.playerHealth}`);
+
+    if (this.playerHealth <= 0) {
+      alert("Game Over! Restarting game world...");
+      this.playerHealth = this.maxHealth;
+      this.player.x = 80;
+      this.player.y = 100;
+      this.renderHearts();
+    } else {
+      // Trigger brief immunity window on hit
+      this.isInvincible = true;
+      this.player.DOMElement.classList.add("damaged");
+      setTimeout(() => {
+        this.isInvincible = false;
+        this.player.DOMElement.classList.remove("damaged");
+      }, this.invincibilityDuration);
+    }
+  }
+
   tick() {
     // Update positions mathematically in memory
     this.player.update(this.keysPressed);
     this.enemies.forEach((zombie) => zombie.update(this.player));
+
+    this.enemies.forEach((enemy) => {
+      if (this.checkCollision(this.player, enemy)) {
+        this.takeDamage();
+      }
+    });
 
     // Render positions out to the screen
     this.player.render();

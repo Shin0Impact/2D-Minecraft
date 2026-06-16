@@ -2,11 +2,11 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>2D Minecraft Game</title>
+    <title>2D Minecraft</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <div
+    <main
       id="gameWindow"
       style="
         position: relative;
@@ -16,18 +16,15 @@
         overflow: hidden;
       "
     >
-      <div id="worldGrid"></div>
-      <div
+      <section id="worldGrid"></section>
+
+      <article
         id="playerSprite"
-        style="
-          position: absolute;
-          width: 30px;
-          height: 45px;
-          background-color: red;
-        "
-      ></div>
-      <div id="enemyContainer"></div>
-    </div>
+        style="position: absolute; width: 30px; height: 45px"
+      ></article>
+
+      <aside id="enemyContainer"></aside>
+    </main>
 
     <script src="World.js"></script>
     <script src="Player.js"></script>

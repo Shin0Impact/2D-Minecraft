@@ -10,43 +10,82 @@
   width: 40px;
   height: 40px;
   box-sizing: border-box;
+  background-size: cover;
+  background-repeat: no-repeat;
+  image-rendering: pixelated; /* Keeps retro pixel textures crisp instead of blurry */
 }
 
-/* Block Textures / Colors */
+/*Asset*/
 .air {
   background-color: #74b9ff;
 }
 
 .grass {
-  background-color: #2ecc71;
-  border-bottom: 3px solid #27ae60;
+  background-image: url("Assets/Grass.png");
 }
 
 .dirt {
-  background-color: #e67e22;
-  border: 1px solid #636e72;
+  background-image: url("Assets/Dirt.png");
 }
 
 .stone {
-  background-color: #7f8c8d;
-  border: 1px solid #636e72;
-}
-.water {
-  background-color: #3498db;
-  border-top: 3px solid #2980b9;
+  background-image: url("Assets/Stone.png");
 }
 
-/* enemies */
+.water {
+  background-image: url("Assets/Water.png");
+}
+
+/* 🧍 The Player Sprite */
+#playerSprite {
+  background-image: url("Assets/Player.png");
+  background-size: cover;
+  image-rendering: pixelated;
+  transition: filter 0.1s ease; /* Smooth transition for damage flash */
+}
+
+/* When hit, flash the player sprite bright transparent red */
+#playerSprite.damaged {
+  filter: sepia(1) saturate(5) hue-rotate(-50deg);
+  opacity: 0.7;
+}
+
 .enemy {
   position: absolute;
   width: 30px;
   height: 45px;
   z-index: 5;
+  background-size: cover;
+  image-rendering: pixelated;
 }
 
-/* Zombie */
 .enemy.zombie {
-  background-color: #27ae60;
-  border: 2px solid #1abc9c;
-  border-radius: 4px;
+  background-image: url("Assets/Zombie.png");
+}
+
+/*Hearts display*/
+#heartUI {
+  position: absolute;
+  bottom: 15px;
+  left: 15px;
+  z-index: 100;
+  display: flex;
+  gap: 6px;
+}
+
+.heart {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+
+.heart.full {
+  background-image: url("Assets/Heart_Full.png");
+}
+
+.heart.empty {
+  background-image: url("Assets/Heart_Empty.png");
 }
