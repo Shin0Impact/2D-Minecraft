@@ -27,16 +27,19 @@
           margin: 0;
         "
       >
-        <section id="worldGrid"></section>
+        <section
+          id="stage"
+          style="position: absolute; top: 0; left: 0; width: 100%; height: 100%"
+        >
+          <section id="worldGrid"></section>
+          <article
+            id="playerSprite"
+            style="position: absolute; width: 30px; height: 45px"
+          ></article>
+          <section id="enemyContainer"></section>
+        </section>
 
         <section id="heartUI"></section>
-
-        <article
-          id="playerSprite"
-          style="position: absolute; width: 30px; height: 45px"
-        ></article>
-
-        <section id="enemyContainer"></section>
       </main>
 
       <aside id="toolBelt">

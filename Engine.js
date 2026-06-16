@@ -1,6 +1,6 @@
 class GameEngine {
   constructor() {
-    this.world = new WorldGrid(15, 20);
+    this.world = new WorldGrid(20, 40, 45);
     this.player = null;
     this.enemies = [];
     this.keysPressed = {};
@@ -10,16 +10,21 @@ class GameEngine {
     this.isInvincible = false;
     this.invincibilityDuration = 1000;
 
-    // Track the active selected utility state
     this.currentTool = "sword";
+    this.mineRange = 80;
 
-    // Max distance (in pixels) the player can reach to mine blocks (3 blocks * 40px = 120px)
-    this.mineRange = 120;
+    // Camera offset tracking properties
+    this.cameraX = 0;
+    this.cameraY = 0;
+    this.stageElement = null;
   }
 
   init() {
     this.world.generate();
     this.world.render();
+
+    // Cache the moving stage viewport container
+    this.stageElement = document.getElementById("stage");
 
     let spawnRow = 0;
     for (let r = 0; r < this.world.rows; r++) {
@@ -54,16 +59,22 @@ class GameEngine {
     const gameWindow = document.getElementById("gameWindow");
     gameWindow.addEventListener("mousedown", (e) => {
       const rect = gameWindow.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
+
+      // Calculate screen click relative to window dimensions
+      const screenX = e.clientX - rect.left;
+      const screenY = e.clientY - rect.top;
+
+      // Crucial fix: Add current camera offset to translate screen space back to absolute world space positions
+      const worldX = screenX + this.cameraX;
+      const worldY = screenY + this.cameraY;
 
       const playerCenter = this.player.x + this.player.width / 2;
-      this.player.facing = mouseX < playerCenter ? "left" : "right";
+      this.player.facing = worldX < playerCenter ? "left" : "right";
 
       if (this.currentTool === "sword") {
         this.executePlayerAttack();
       } else {
-        this.executeEnvironmentMining(mouseX, mouseY);
+        this.executeEnvironmentMining(worldX, worldY);
       }
     });
 
@@ -81,37 +92,75 @@ class GameEngine {
     });
   }
 
-  // Dictates matching logic between specific tools and target tile strings with reach boundaries
-  executeEnvironmentMining(clickX, clickY) {
-    // 1. Find the middle points of the player character
+  // Updates screen space offset based on player focus points
+  updateCamera() {
+    const viewWidth = 800;
+    const viewHeight = 600;
+
+    // Center point math formulas targeting center vectors
+    this.cameraX = this.player.x + this.player.width / 2 - viewWidth / 2;
+    this.cameraY = this.player.y + this.player.height / 2 - viewHeight / 2;
+
+    // Optional bounds: Keep camera within the grid edges
+    const maxCameraX = this.world.cols * this.world.tileSize - viewWidth;
+    const maxCameraY = this.world.rows * this.world.tileSize - viewHeight;
+
+    this.cameraX = Math.max(0, Math.min(this.cameraX, maxCameraX));
+    this.cameraY = Math.max(0, Math.min(this.cameraY, maxCameraY));
+
+    // Shift the entire structural stage in reverse axis orientation
+    this.stageElement.style.transform = `translate(${-this.cameraX}px, ${-this.cameraY}px)`;
+  }
+
+  executeEnvironmentMining(worldX, worldY) {
     const playerCenterX = this.player.x + this.player.width / 2;
     const playerCenterY = this.player.y + this.player.height / 2;
 
-    // 2. Find the middle points of the targeted tile block
-    const tileCol = Math.floor(clickX / this.world.tileSize);
-    const tileRow = Math.floor(clickY / this.world.tileSize);
+    const tileCol = Math.floor(worldX / this.world.tileSize);
+    const tileRow = Math.floor(worldY / this.world.tileSize);
+
+    // Safety check if user clicks outside world boundary maps entirely
+    if (
+      tileCol < 0 ||
+      tileCol >= this.world.cols ||
+      tileRow < 0 ||
+      tileRow >= this.world.rows
+    ) {
+      return;
+    }
+
     const tileCenterX = tileCol * this.world.tileSize + this.world.tileSize / 2;
     const tileCenterY = tileRow * this.world.tileSize + this.world.tileSize / 2;
 
-    // 3. Calculate distance using the Pythagorean distance formula
     const deltaX = tileCenterX - playerCenterX;
     const deltaY = tileCenterY - playerCenterY;
     const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
-    // Guard clause: stop evaluation immediately if the block is out of range
     if (distance > this.mineRange) {
       return;
     }
 
-    const tileType = this.world.getTileTypeAt(clickX, clickY);
+    const tileType = this.world.matrix[tileRow][tileCol];
     let canBreak = false;
+
+    const breakableByPickaxe = [
+      "stone",
+      "coal",
+      "iron",
+      "gold",
+      "diamond",
+      "water",
+    ];
 
     if (
       this.currentTool === "axe" &&
       (tileType === "wood" || tileType === "leaves")
     ) {
       canBreak = true;
-    } else if (this.currentTool === "pickaxe" && tileType === "stone") {
+    } else if (
+      this.currentTool === "pickaxe" &&
+      breakableByPickaxe.includes(tileType)
+    ) {
       canBreak = true;
     } else if (
       this.currentTool === "shovel" &&
@@ -320,6 +369,9 @@ class GameEngine {
 
     this.player.render();
     this.enemies.forEach((zombie) => zombie.render());
+
+    // Call camera centering updates immediately before the frame paints
+    this.updateCamera();
 
     for (let key in this.keysPressed) {
       if (this.keysPressed[key] === "JUST_PRESSED") {

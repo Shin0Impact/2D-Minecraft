@@ -7,8 +7,8 @@
 
 /* Individual tile blocks */
 .tile {
-  width: 40px;
-  height: 40px;
+  width: 45px;
+  height: 45px;
   box-sizing: border-box;
   background-size: cover;
   background-repeat: no-repeat;
@@ -32,8 +32,29 @@
   background-image: url("Assets/Stone.png");
 }
 
+.coal {
+  background-image: url("Assets/Coal.png");
+  background-color: #34495e;
+}
+
+.iron {
+  background-image: url("Assets/Iron.png");
+  background-color: #bdc3c7;
+}
+
+.gold {
+  background-image: url("Assets/Gold.png");
+  background-color: #f1c40f;
+}
+
+.diamond {
+  background-image: url("Assets/Diamond.png");
+  background-color: #9b59b6;
+}
+
 .water {
   background-image: url("Assets/Water.png");
+  background-color: #2980b9;
 }
 
 .wood {

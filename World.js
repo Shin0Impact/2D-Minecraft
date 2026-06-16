@@ -1,13 +1,13 @@
 class WorldGrid {
-  constructor(rows, cols, tileSize = 40) {
+  constructor(rows = 20, cols = 40, tileSize = 45) {
     this.rows = rows;
     this.cols = cols;
-    this.tileSize = tileSize;
+    this.tileSize = tileSize; // Updated to 45px so the 45px high player fits perfectly
     this.matrix = [];
     this.DOMElement = document.getElementById("worldGrid");
   }
 
-  // Generates a hard-coded layout configuration using a scannable visual template
+  // Generates an expanded hard-coded layout configuration with diverse ore veins and pools
   generate() {
     this.matrix = [];
 
@@ -16,19 +16,20 @@ class WorldGrid {
       this.matrix.push(new Array(this.cols).fill("air"));
     }
 
-    // Define a flat ground level base line
-    const floorRow = 9;
+    // Define a flat ground level baseline (giving more headroom above, and deeper caves below)
+    const floorRow = 8;
 
-    // Fill the standard subterranean ground layers uniform across the horizon
+    // Fill the standard subterranean ground layers across the expanded horizon
     for (let c = 0; c < this.cols; c++) {
       this.matrix[floorRow][c] = "grass";
 
       for (let r = floorRow + 1; r < this.rows; r++) {
-        this.matrix[r][c] = r < floorRow + 3 ? "dirt" : "stone";
+        // Dirt fills the immediate layers underneath grass, deeper rows turn to stone
+        this.matrix[r][c] = r < floorRow + 4 ? "dirt" : "stone";
       }
     }
 
-    // Inject dedicated environmental features directly using structured key-value maps
+    // Inject custom environmental structures, deep ore veins, and water pockets
     const structures = {
       stoneObstacles: [
         { row: floorRow - 1, col: 7, type: "stone" },
@@ -50,6 +51,50 @@ class WorldGrid {
         { row: floorRow - 5, col: 12, type: "leaves" },
         { row: floorRow - 5, col: 13, type: "leaves" },
         { row: floorRow - 5, col: 14, type: "leaves" },
+      ],
+      // Deep resource deposits scattered inside lower stone layers
+      coalVeins: [
+        { row: floorRow + 5, col: 4, type: "coal" },
+        { row: floorRow + 5, col: 5, type: "coal" },
+        { row: floorRow + 6, col: 5, type: "coal" },
+        { row: floorRow + 7, col: 22, type: "coal" },
+        { row: floorRow + 8, col: 22, type: "coal" },
+        { row: floorRow + 8, col: 23, type: "coal" },
+      ],
+      ironVeins: [
+        { row: floorRow + 6, col: 10, type: "iron" },
+        { row: floorRow + 7, col: 10, type: "iron" },
+        { row: floorRow + 6, col: 11, type: "iron" },
+        { row: floorRow + 8, col: 31, type: "iron" },
+        { row: floorRow + 9, col: 31, type: "iron" },
+      ],
+      goldVeins: [
+        { row: floorRow + 8, col: 15, type: "gold" },
+        { row: floorRow + 9, col: 15, type: "gold" },
+        { row: floorRow + 9, col: 16, type: "gold" },
+        { row: floorRow + 7, col: 35, type: "gold" },
+      ],
+      diamondVeins: [
+        { row: this.rows - 2, col: 18, type: "diamond" },
+        { row: this.rows - 2, col: 19, type: "diamond" },
+        { row: this.rows - 3, col: 19, type: "diamond" },
+        { row: this.rows - 2, col: 28, type: "diamond" },
+      ],
+      // Hardcoded water bodies (carved into the surface floor profile)
+      waterPools: [
+        // Pool 1 (Left Area)
+        { row: floorRow, col: 3, type: "water" },
+        { row: floorRow, col: 4, type: "water" },
+        { row: floorRow + 1, col: 3, type: "water" },
+        { row: floorRow + 1, col: 4, type: "water" },
+        // Pool 2 (Right Area)
+        { row: floorRow, col: 25, type: "water" },
+        { row: floorRow, col: 26, type: "water" },
+        { row: floorRow, col: 27, type: "water" },
+        { row: floorRow + 1, col: 25, type: "water" },
+        { row: floorRow + 1, col: 26, type: "water" },
+        { row: floorRow + 1, col: 27, type: "water" },
+        { row: floorRow + 2, col: 26, type: "water" },
       ],
     };
 
@@ -97,7 +142,9 @@ class WorldGrid {
       return true;
     }
 
-    return tile !== "air" && tile !== "leaves" && tile !== "wood";
+    // Added specific solid checks for minerals and water as requested
+    const nonSolidTypes = ["air", "leaves", "wood"];
+    return !nonSolidTypes.includes(tile);
   }
 
   // Helper utility fetching the internal identity strings of specific tiles
