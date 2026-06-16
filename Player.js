@@ -10,56 +10,40 @@ class Player {
     this.gravity = 0.5;
     this.jumpForce = -10;
     this.isGrounded = false;
-    this.grid = gridInstance; // currently broken
+    this.grid = gridInstance;
     this.knockbackTimer = 0;
     this.facing = "right";
 
     this.DOMElement = document.getElementById("playerSprite");
   }
 
-  //knockback mechanic
+  // Processes impact dynamics across multiple execution ticks.
   applyKnockback(directionX) {
-    this.vx = directionX * 8; // Launch horizontally (positive = right, negative = left)
-    this.vy = -6; // Launch slightly upward into the air
+    this.vx = directionX * 8;
+    this.vy = -6;
     this.isGrounded = false;
-    this.knockbackTimer = 5; // Number of frames player loses steering control
+    this.knockbackTimer = 15;
   }
 
-  update(keysPressed, enemiesList = []) {
-    // knockback timer countdown or normal input tracking
+  // Collects interface states to modify intent velocity fields.
+  update(keysPressed) {
     if (this.knockbackTimer > 0) {
       this.knockbackTimer--;
-      this.vx *= 0.92; // Gradually slow down horizontally in mid-air
+      this.vx *= 0.92;
     } else {
-      // Horizontal movement logic based on key presses
       if (keysPressed["d"] || keysPressed["ArrowRight"]) {
         this.vx = this.speed;
         this.facing = "right";
       } else if (keysPressed["a"] || keysPressed["ArrowLeft"]) {
         this.vx = -this.speed;
         this.facing = "left";
-      } else this.vx = 0;
-
-      // SOLID ENTITY CHECK
-      if (this.vx !== 0) {
-        let nextX = this.x + this.vx;
-        enemiesList.forEach((enemy) => {
-          if (
-            nextX < enemy.x + enemy.width &&
-            nextX + this.width > enemy.x &&
-            this.y < enemy.y + enemy.height &&
-            this.y + this.height > enemy.y
-          ) {
-            this.vx = 0; // Prevent pushing the enemy manually
-          }
-        });
+      } else {
+        this.vx = 0;
       }
     }
 
-    // Gravity
     this.vy += this.gravity;
 
-    // Jump Check (single press check)
     if (
       (keysPressed[" "] === "JUST_PRESSED" ||
         keysPressed["w"] === "JUST_PRESSED") &&
@@ -69,32 +53,17 @@ class Player {
       this.vy = this.jumpForce;
       this.isGrounded = false;
     }
-
-    // Ground Collision
-    let feetY = this.y + this.height + this.vy;
-    let leftFootX = this.x + 4; // Inward offset to stop edge sticking
-    let rightFootX = this.x + this.width - 4;
-
-    if (
-      this.grid.isTileSolidAt(leftFootX, feetY) ||
-      this.grid.isTileSolidAt(rightFootX, feetY)
-    ) {
-      this.vy = 0;
-      this.isGrounded = true;
-    } else {
-      this.isGrounded = false;
-    }
-
-    // Apply movement speeds
-    this.x += this.vx;
-    this.y += this.vy;
   }
 
+  // Adjusts visual placement vectors on-screen and mirrors components dynamically.
   render() {
-    // Push the updated mathematical states cleanly to CSS properties
     this.DOMElement.style.left = `${this.x}px`;
     this.DOMElement.style.top = `${this.y}px`;
-    this.DOMElement.classList.toggle("mirror-left", this.facing === "left");
-    this.DOMElement.classList.toggle("mirror-right", this.facing === "right");
+
+    if (this.facing === "left") {
+      this.DOMElement.style.transform = "scaleX(-1)";
+    } else {
+      this.DOMElement.style.transform = "scaleX(1)";
+    }
   }
 }

@@ -4,85 +4,76 @@ class Enemy {
     this.y = startY;
     this.width = 30;
     this.height = 45;
-    this.vx = 0.5; // speed
+    this.vx = 0.5;
     this.vy = 0;
-    this.type = type; // "zombie", "skeleton", "creeper"
+    this.gravity = 0.5;
+    this.type = type;
     this.grid = gridInstance;
     this.health = 3;
     this.facing = "left";
     this.knockbackTimer = 0;
+    this.isGrounded = false;
 
-    this.DOMElement = document.createElement("div");
+    this.attackRange = 25;
+    this.attackCooldown = 0;
+    this.attackRate = 90;
+
+    // Uses a semantic article element to represent an independent entity structure.
+    this.DOMElement = document.createElement("article");
     this.DOMElement.className = `enemy ${this.type}`;
     document.getElementById("enemyContainer").appendChild(this.DOMElement);
   }
 
   applyKnockback(directionX) {
-    this.vx = directionX * 6; // Launch horizontal speed force
-    this.vy = -4; // Launch slightly upward
-    this.knockbackTimer = 8; // Increased slightly from 5 to feel much better
+    this.vx = directionX * 6;
+    this.vy = -4;
+    this.knockbackTimer = 8;
   }
 
   update(playerTarget) {
+    if (this.attackCooldown > 0) {
+      this.attackCooldown--;
+    }
+
     if (this.knockbackTimer > 0) {
       this.knockbackTimer--;
-      this.vx *= 0.9; // Gradually slow down horizontal slide
-
-      // Predict next spot for quick environment solid tile collision check
-      let nextX = this.x + this.vx;
-      let checkX = this.vx > 0 ? nextX + this.width : nextX;
-      if (!this.grid.isTileSolidAt(checkX, this.y + this.height / 2)) {
-        this.x = nextX;
-      } else {
-        this.vx = 0; // stop sliding if hitting a wall
-      }
+      this.vx *= 0.9;
     } else {
-      // Normal behavior: Reset normal patrol speed when knockback expires
-      this.vx = 0.5;
+      const enemyCenter = this.x + this.width / 2;
+      const playerCenter = playerTarget.x + playerTarget.width / 2;
+      const horizontalDistance = Math.abs(enemyCenter - playerCenter);
+      const verticalDistance = Math.abs(this.y - playerTarget.y);
 
-      // Follow the player horizontal logic (Only runs if NOT knocked back!)
-      if (this.x < playerTarget.x) {
-        this.x += this.vx;
-        this.facing = "right";
-
-        // Solid Block Check: If stepping forward forces an overlap, stop moving!
-        if (
-          this.x + this.width > playerTarget.x &&
-          this.x < playerTarget.x + playerTarget.width &&
-          this.y + this.height > playerTarget.y &&
-          this.y < playerTarget.y + playerTarget.height
-        ) {
-          this.x = playerTarget.x - this.width; // Snap right against player left side boundary
-        }
-      } else if (this.x > playerTarget.x) {
-        this.x -= this.vx;
-        this.facing = "left";
-
-        // solid Block Check: Mirroring wall contact pushback on the opposite side
-        if (
-          this.x < playerTarget.x + playerTarget.width &&
-          this.x + this.width > playerTarget.x &&
-          this.y + this.height > playerTarget.y &&
-          this.y < playerTarget.y + playerTarget.height
-        ) {
-          this.x = playerTarget.x + playerTarget.width; // Snap right against player's right side boundary
+      if (
+        horizontalDistance <= this.attackRange &&
+        verticalDistance < this.height
+      ) {
+        this.vx = 0;
+        this.facing = enemyCenter < playerCenter ? "right" : "left";
+      } else {
+        if (this.x < playerTarget.x) {
+          this.vx = 0.5;
+          this.facing = "right";
+        } else if (this.x > playerTarget.x) {
+          this.vx = -0.5;
+          this.facing = "left";
+        } else {
+          this.vx = 0;
         }
       }
     }
 
-    // Gravity checks
-    this.vy += 0.5;
-    let feetY = this.y + this.height + this.vy;
-    if (this.grid.isTileSolidAt(this.x + this.width / 2, feetY)) {
-      this.vy = 0;
-    }
-    this.y += this.vy;
+    this.vy += this.gravity;
   }
 
   render() {
     this.DOMElement.style.left = `${this.x}px`;
     this.DOMElement.style.top = `${this.y}px`;
-    this.DOMElement.classList.toggle("mirror-left", this.facing === "left");
-    this.DOMElement.classList.toggle("mirror-right", this.facing === "right");
+
+    if (this.facing === "left") {
+      this.DOMElement.style.transform = "scaleX(-1)";
+    } else {
+      this.DOMElement.style.transform = "scaleX(1)";
+    }
   }
 }
