@@ -36,7 +36,15 @@
   background-image: url("Assets/Water.png");
 }
 
-/* 🧍 The Player Sprite */
+.wood {
+  background-image: url("Assets/Wood.png");
+}
+
+.leaves {
+  background-image: url("Assets/Leaves.png");
+}
+
+/* The Player Sprite */
 #playerSprite {
   background-image: url("Assets/Player.png");
   background-size: cover;

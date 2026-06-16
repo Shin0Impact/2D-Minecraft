@@ -26,7 +26,7 @@ class Player {
   }
 
   update(keysPressed, enemiesList = []) {
-    // nockback timer countdown or normal input tracking
+    // knockback timer countdown or normal input tracking
     if (this.knockbackTimer > 0) {
       this.knockbackTimer--;
       this.vx *= 0.92; // Gradually slow down horizontally in mid-air

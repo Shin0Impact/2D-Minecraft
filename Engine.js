@@ -80,9 +80,11 @@ class GameEngine {
       if (this.checkCollision(attackHitbox, enemy)) {
         enemy.health--;
         console.log(`Hit enemy! Enemy HP: ${enemy.health}`);
-
-        // If enemy HP drops to 0, vaporize them!
-        if (enemy.health <= 0) {
+        if (enemy.health > 0) {
+          // Determine push direction factor based on player orientation
+          let pushDirection = this.player.facing === "right" ? 1 : -1;
+          enemy.applyKnockback(pushDirection);
+        } else {
           console.log("Enemy defeated!");
           enemy.DOMElement.remove(); // clear out of DOM layout
           this.enemies.splice(i, 1); // drop out of active arrays
