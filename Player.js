@@ -15,17 +15,32 @@ class Player {
     this.DOMElement = document.getElementById("playerSprite");
   }
 
-  update(keysPressed) {
-    // movement logic based on key presses
+  update(keysPressed, enemiesList = []) {
+    // horizontal movement logic
     if (keysPressed["d"] || keysPressed["ArrowRight"]) this.vx = this.speed;
     else if (keysPressed["a"] || keysPressed["ArrowLeft"])
       this.vx = -this.speed;
     else this.vx = 0;
 
+    // SOLID ENTITY CHECK
+    if (this.vx !== 0) {
+      let nextX = this.x + this.vx;
+      enemiesList.forEach((enemy) => {
+        if (
+          nextX < enemy.x + enemy.width &&
+          nextX + this.width > enemy.x &&
+          this.y < enemy.y + enemy.height &&
+          this.y + this.height > enemy.y
+        ) {
+          this.vx = 0; // Stop player movement dead in their tracks
+        }
+      });
+    }
+
     // Gravity
     this.vy += this.gravity;
 
-    // Only jump if the key state was a fresh down-press this frame!
+    // Jump Check (single press check)
     if (
       (keysPressed[" "] === "JUST_PRESSED" ||
         keysPressed["w"] === "JUST_PRESSED") &&
@@ -35,9 +50,9 @@ class Player {
       this.isGrounded = false;
     }
 
-    // Ground Collision Logic
+    // Ground Collision
     let feetY = this.y + this.height + this.vy;
-    let leftFootX = this.x + 4; // Adding slight inward padding so bounding walls don't drag
+    let leftFootX = this.x + 4; // Inward offset to stop edge sticking
     let rightFootX = this.x + this.width - 4;
 
     if (

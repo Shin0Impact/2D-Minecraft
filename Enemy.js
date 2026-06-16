@@ -15,17 +15,37 @@ class Enemy {
   }
 
   update(playerTarget) {
-    // fol;low the player logic
+    // Follow the player horizontal logic
     if (this.x < playerTarget.x) {
       this.x += this.vx;
+
+      // 🌟 Solid Block Check: If stepping forward forces an overlap, stop moving!
+      if (
+        this.x + this.width > playerTarget.x &&
+        this.x < playerTarget.x + playerTarget.width &&
+        this.y + this.height > playerTarget.y &&
+        this.y < playerTarget.y + playerTarget.height
+      ) {
+        this.x = playerTarget.x - this.width; // Snap right against player's left side boundary
+      }
     } else if (this.x > playerTarget.x) {
       this.x -= this.vx;
+
+      // 🌟 Solid Block Check: Mirroring wall contact pushback on the opposite side
+      if (
+        this.x < playerTarget.x + playerTarget.width &&
+        this.x + this.width > playerTarget.x &&
+        this.y + this.height > playerTarget.y &&
+        this.y < playerTarget.y + playerTarget.height
+      ) {
+        this.x = playerTarget.x + playerTarget.width; // Snap right against player's right side boundary
+      }
     }
 
-    // gravity checks
+    // Gravity checks
     this.vy += 0.5;
     let feetY = this.y + this.height + this.vy;
-    if (this.grid.isTileSolidAt(this.x, feetY)) {
+    if (this.grid.isTileSolidAt(this.x + this.width / 2, feetY)) {
       this.vy = 0;
     }
     this.y += this.vy;

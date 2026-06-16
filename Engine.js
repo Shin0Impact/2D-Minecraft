@@ -57,11 +57,12 @@ class GameEngine {
 
   /* makes sure player and enemy dont overlap and also used for taking damage*/
   checkCollision(rect1, rect2) {
+    const padding = 4; // 4px touch radius detection margin
     return (
-      rect1.x < rect2.x + rect2.width &&
-      rect1.x + rect1.width > rect2.x &&
-      rect1.y < rect2.y + rect2.height &&
-      rect1.y + rect1.height > rect2.y
+      rect1.x - padding < rect2.x + rect2.width &&
+      rect1.x + rect1.width + padding > rect2.x &&
+      rect1.y - padding < rect2.y + rect2.height &&
+      rect1.y + rect1.height + padding > rect2.y
     );
   }
 
@@ -91,7 +92,7 @@ class GameEngine {
 
   tick() {
     // Update positions mathematically in memory
-    this.player.update(this.keysPressed);
+    this.player.update(this.keysPressed, this.enemies);
     this.enemies.forEach((zombie) => zombie.update(this.player));
 
     this.enemies.forEach((enemy) => {
