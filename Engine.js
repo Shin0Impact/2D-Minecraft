@@ -57,7 +57,6 @@ class GameEngine {
     this.tick();
   }
 
-  // Translates vectors over axes and resolves collision checking against environment grids.
   resolvePhysics(entity) {
     const tileSize = this.world.tileSize;
 
@@ -69,6 +68,7 @@ class GameEngine {
       entity.y + entity.height / 2,
       entity.y + entity.height - 1,
     ];
+
     if (entity.vx > 0) {
       let rightX = entity.x + entity.width;
       if (checkYPoints.some((y) => this.world.isTileSolidAt(rightX, y))) {
@@ -86,6 +86,7 @@ class GameEngine {
     }
 
     // --- VERTICAL AXIS ---
+    let previousY = entity.y;
     entity.y += entity.vy;
     entity.isGrounded = false;
 
@@ -94,9 +95,34 @@ class GameEngine {
       entity.x + entity.width / 2,
       entity.x + entity.width - 4,
     ];
+
     if (entity.vy > 0) {
       let feetY = entity.y + entity.height;
-      if (checkXPoints.some((x) => this.world.isTileSolidAt(x, feetY))) {
+      let hitSolidGround = false;
+
+      for (let x of checkXPoints) {
+        // Pass true as third parameter to temporarily treat leaves as solid blocks for landing checks
+        if (this.world.isTileSolidAt(x, feetY, true)) {
+          let isLeaf = this.world.getTileTypeAt?.(x, feetY) === "leaves";
+
+          if (isLeaf) {
+            // Evaluates falling path vector threshold against the surface boundary plane
+            let priorFeetY = previousY + entity.height;
+            let tileRow = Math.floor(feetY / tileSize);
+            let leafTopY = tileRow * tileSize;
+
+            if (priorFeetY <= leafTopY) {
+              hitSolidGround = true;
+              break;
+            }
+          } else {
+            hitSolidGround = true;
+            break;
+          }
+        }
+      }
+
+      if (hitSolidGround) {
         let tileRow = Math.floor(feetY / tileSize);
         entity.y = tileRow * tileSize - entity.height;
         entity.vy = 0;
@@ -112,7 +138,6 @@ class GameEngine {
     }
   }
 
-  // Emits a temporary physical collision zone to calculate standard sword strikes.
   executePlayerAttack() {
     const attackRange = 40;
     let attackHitbox = {
@@ -140,7 +165,6 @@ class GameEngine {
     }
   }
 
-  // Generates semantic section container elements to handle active display updates.
   renderHearts() {
     let heartUI = document.getElementById("heartUI");
     if (!heartUI) {
@@ -156,7 +180,6 @@ class GameEngine {
     }
   }
 
-  // Formulates intersection validation checks across bounding structures.
   checkCollision(rect1, rect2) {
     return (
       rect1.x < rect2.x + rect2.width &&
@@ -166,7 +189,6 @@ class GameEngine {
     );
   }
 
-  // Deducts health metrics, initializes knockback variables, and tracks immunity states.
   takeDamage(enemy) {
     if (this.isInvincible) return;
 
@@ -198,7 +220,6 @@ class GameEngine {
     }
   }
 
-  // Continuous frame updating routine handling input tracking and range limits.
   tick() {
     this.player.update(this.keysPressed);
     this.enemies.forEach((zombie) => zombie.update(this.player));
@@ -209,13 +230,10 @@ class GameEngine {
     this.enemies.forEach((enemy) => {
       let handHeight = 10;
       let targetY = enemy.y + enemy.height / 3;
-      let targetX = 0;
-
-      if (enemy.facing === "right") {
-        targetX = enemy.x + enemy.width / 2;
-      } else {
-        targetX = enemy.x + enemy.width / 2 - enemy.attackRange;
-      }
+      let targetX =
+        enemy.facing === "right"
+          ? enemy.x + enemy.width / 2
+          : enemy.x + enemy.width / 2 - enemy.attackRange;
 
       let enemyAttackBox = {
         x: targetX,

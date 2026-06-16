@@ -17,8 +17,9 @@ class Enemy {
     this.attackRange = 25;
     this.attackCooldown = 0;
     this.attackRate = 90;
+    // Jumping power variable matching standard tile grid acceleration
+    this.jumpForce = -8;
 
-    // Uses a semantic article element to represent an independent entity structure.
     this.DOMElement = document.createElement("article");
     this.DOMElement.className = `enemy ${this.type}`;
     document.getElementById("enemyContainer").appendChild(this.DOMElement);
@@ -51,14 +52,27 @@ class Enemy {
         this.vx = 0;
         this.facing = enemyCenter < playerCenter ? "right" : "left";
       } else {
+        // Track the current movement intent speed setting
+        let targetSpeed = 0.5;
         if (this.x < playerTarget.x) {
-          this.vx = 0.5;
+          this.vx = targetSpeed;
           this.facing = "right";
         } else if (this.x > playerTarget.x) {
-          this.vx = -0.5;
+          this.vx = -targetSpeed;
           this.facing = "left";
         } else {
           this.vx = 0;
+        }
+
+        // Jump if moving toward a target but horizontal position was stopped by solid terrain
+        if (this.isGrounded && Math.abs(this.vx) > 0) {
+          let nextCheckX = this.vx > 0 ? this.x + this.width + 2 : this.x - 2;
+          let kneeHeightY = this.y + this.height - 10;
+
+          if (this.grid.isTileSolidAt(nextCheckX, kneeHeightY)) {
+            this.vy = this.jumpForce;
+            this.isGrounded = false;
+          }
         }
       }
     }
