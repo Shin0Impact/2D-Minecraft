@@ -6,48 +6,98 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <section
-      class="game-wrapper"
-      style="
-        display: flex;
-        gap: 20px;
-        justify-content: center;
-        align-items: start;
-        margin-top: 20px;
-      "
-    >
-      <main
-        id="gameWindow"
-        style="
-          position: relative;
-          width: 800px;
-          height: 600px;
-          background-color: #74b9ff;
-          overflow: hidden;
-          margin: 0;
-        "
-      >
-        <section
-          id="stage"
-          style="position: absolute; top: 0; left: 0; width: 100%; height: 100%"
-        >
+    <section class="game-container">
+      <main id="gameWindow">
+        <section id="stage">
           <section id="worldGrid"></section>
-          <article
-            id="playerSprite"
-            style="position: absolute; width: 30px; height: 45px"
-          ></article>
+          <article id="playerSprite"></article>
           <section id="enemyContainer"></section>
         </section>
 
         <section id="heartUI"></section>
       </main>
 
-      <aside id="toolBelt">
-        <button class="tool-btn active" data-tool="sword">Sword</button>
-        <button class="tool-btn" data-tool="axe">Axe</button>
-        <button class="tool-btn" data-tool="pickaxe">Pickaxe</button>
-        <button class="tool-btn" data-tool="shovel">Shovel</button>
-      </aside>
+      <footer id="toolBelt">
+        <button class="tool-btn active" data-tool="sword" title="Sword">
+          ⚔️
+        </button>
+        <button class="tool-btn" data-tool="axe" title="Axe">🪓</button>
+        <button class="tool-btn" data-tool="pickaxe" title="Pickaxe">⛏️</button>
+        <button class="tool-btn" data-tool="shovel" title="Shovel">🧹</button>
+
+        <button
+          class="tool-btn item-btn"
+          data-tool="place-grass"
+          title="Grass"
+          style="display: none"
+        >
+          <span class="block-preview grass-preview"></span>
+          <span class="item-count" id="count-grass">0</span>
+        </button>
+        <button
+          class="tool-btn item-btn"
+          data-tool="place-dirt"
+          title="Dirt"
+          style="display: none"
+        >
+          <span class="block-preview dirt-preview"></span>
+          <span class="item-count" id="count-dirt">0</span>
+        </button>
+        <button
+          class="tool-btn item-btn"
+          data-tool="place-stone"
+          title="Stone"
+          style="display: none"
+        >
+          <span class="block-preview stone-preview"></span>
+          <span class="item-count" id="count-stone">0</span>
+        </button>
+        <button
+          class="tool-btn item-btn"
+          data-tool="place-wood"
+          title="Wood"
+          style="display: none"
+        >
+          <span class="block-preview wood-preview"></span>
+          <span class="item-count" id="count-wood">0</span>
+        </button>
+        <button
+          class="tool-btn item-btn"
+          data-tool="place-coal"
+          title="Coal"
+          style="display: none"
+        >
+          <span class="block-preview coal-preview"></span>
+          <span class="item-count" id="count-coal">0</span>
+        </button>
+        <button
+          class="tool-btn item-btn"
+          data-tool="place-iron"
+          title="Iron"
+          style="display: none"
+        >
+          <span class="block-preview iron-preview"></span>
+          <span class="item-count" id="count-iron">0</span>
+        </button>
+        <button
+          class="tool-btn item-btn"
+          data-tool="place-gold"
+          title="Gold"
+          style="display: none"
+        >
+          <span class="block-preview gold-preview"></span>
+          <span class="item-count" id="count-gold">0</span>
+        </button>
+        <button
+          class="tool-btn item-btn"
+          data-tool="place-diamond"
+          title="Diamond"
+          style="display: none"
+        >
+          <span class="block-preview diamond-preview"></span>
+          <span class="item-count" id="count-diamond">0</span>
+        </button>
+      </footer>
     </section>
 
     <script src="World.js"></script>

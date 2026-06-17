@@ -1,5 +1,5 @@
 class WorldGrid {
-  constructor(rows = 20, cols = 40, tileSize = 45) {
+  constructor(rows = 45, cols = 45, tileSize = 45) {
     this.rows = rows;
     this.cols = cols;
     this.tileSize = tileSize; // Updated to 45px so the 45px high player fits perfectly
@@ -17,7 +17,7 @@ class WorldGrid {
     }
 
     // Define a flat ground level baseline (giving more headroom above, and deeper caves below)
-    const floorRow = 8;
+    const floorRow = 16;
 
     // Fill the standard subterranean ground layers across the expanded horizon
     for (let c = 0; c < this.cols; c++) {

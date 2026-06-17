@@ -1,6 +1,6 @@
 class GameEngine {
   constructor() {
-    this.world = new WorldGrid(20, 40, 45);
+    this.world = new WorldGrid(45, 45, 45);
     this.player = null;
     this.enemies = [];
     this.keysPressed = {};
@@ -11,19 +11,29 @@ class GameEngine {
     this.invincibilityDuration = 1000;
 
     this.currentTool = "sword";
-    this.mineRange = 80;
+    this.mineRange = 120; // Allows cleaner building angles around player borders
 
-    // Camera offset tracking properties
     this.cameraX = 0;
     this.cameraY = 0;
     this.stageElement = null;
+
+    this.inventory = {
+      grass: 0,
+      dirt: 0,
+      stone: 0,
+      wood: 0,
+      leaves: 0,
+      coal: 0,
+      iron: 0,
+      gold: 0,
+      diamond: 0,
+    };
   }
 
   init() {
     this.world.generate();
     this.world.render();
 
-    // Cache the moving stage viewport container
     this.stageElement = document.getElementById("stage");
 
     let spawnRow = 0;
@@ -48,6 +58,7 @@ class GameEngine {
 
     this.renderHearts();
     this.setupToolBelt();
+    this.updateInventoryUI();
 
     window.addEventListener("keydown", (e) => {
       if (!this.keysPressed[e.key]) {
@@ -60,11 +71,9 @@ class GameEngine {
     gameWindow.addEventListener("mousedown", (e) => {
       const rect = gameWindow.getBoundingClientRect();
 
-      // Calculate screen click relative to window dimensions
       const screenX = e.clientX - rect.left;
       const screenY = e.clientY - rect.top;
 
-      // Crucial fix: Add current camera offset to translate screen space back to absolute world space positions
       const worldX = screenX + this.cameraX;
       const worldY = screenY + this.cameraY;
 
@@ -73,6 +82,8 @@ class GameEngine {
 
       if (this.currentTool === "sword") {
         this.executePlayerAttack();
+      } else if (this.currentTool.startsWith("place-")) {
+        this.executeBlockPlacement(worldX, worldY);
       } else {
         this.executeEnvironmentMining(worldX, worldY);
       }
@@ -92,23 +103,47 @@ class GameEngine {
     });
   }
 
-  // Updates screen space offset based on player focus points
+  updateInventoryUI() {
+    for (const item in this.inventory) {
+      const counterElement = document.getElementById(`count-${item}`);
+      if (counterElement) {
+        const count = this.inventory[item];
+        counterElement.textContent = count;
+
+        // Grab the parent hotbar button slot
+        const buttonSlot = counterElement.closest(".tool-btn");
+        if (buttonSlot) {
+          if (count > 0) {
+            buttonSlot.style.display = "flex"; // Show item slot when quantity > 0
+          } else {
+            buttonSlot.style.display = "none"; // Hide item slot when quantity is 0
+
+            // If the player is currently selecting this item block but ran out, switch back to sword safely
+            if (this.currentTool === `place-${item}`) {
+              buttonSlot.classList.remove("active");
+              this.currentTool = "sword";
+              const swordBtn = document.querySelector('[data-tool="sword"]');
+              if (swordBtn) swordBtn.classList.add("active");
+            }
+          }
+        }
+      }
+    }
+  }
+
   updateCamera() {
     const viewWidth = 800;
     const viewHeight = 600;
 
-    // Center point math formulas targeting center vectors
     this.cameraX = this.player.x + this.player.width / 2 - viewWidth / 2;
     this.cameraY = this.player.y + this.player.height / 2 - viewHeight / 2;
 
-    // Optional bounds: Keep camera within the grid edges
     const maxCameraX = this.world.cols * this.world.tileSize - viewWidth;
     const maxCameraY = this.world.rows * this.world.tileSize - viewHeight;
 
     this.cameraX = Math.max(0, Math.min(this.cameraX, maxCameraX));
     this.cameraY = Math.max(0, Math.min(this.cameraY, maxCameraY));
 
-    // Shift the entire structural stage in reverse axis orientation
     this.stageElement.style.transform = `translate(${-this.cameraX}px, ${-this.cameraY}px)`;
   }
 
@@ -119,7 +154,6 @@ class GameEngine {
     const tileCol = Math.floor(worldX / this.world.tileSize);
     const tileRow = Math.floor(worldY / this.world.tileSize);
 
-    // Safety check if user clicks outside world boundary maps entirely
     if (
       tileCol < 0 ||
       tileCol >= this.world.cols ||
@@ -170,7 +204,64 @@ class GameEngine {
     }
 
     if (canBreak) {
+      if (this.inventory[tileType] !== undefined) {
+        this.inventory[tileType]++;
+        this.updateInventoryUI();
+      }
+
       this.world.matrix[tileRow][tileCol] = "air";
+      this.world.render();
+    }
+  }
+
+  executeBlockPlacement(worldX, worldY) {
+    const playerCenterX = this.player.x + this.player.width / 2;
+    const playerCenterY = this.player.y + this.player.height / 2;
+
+    const tileCol = Math.floor(worldX / this.world.tileSize);
+    const tileRow = Math.floor(worldY / this.world.tileSize);
+
+    if (
+      tileCol < 0 ||
+      tileCol >= this.world.cols ||
+      tileRow < 0 ||
+      tileRow >= this.world.rows
+    ) {
+      return;
+    }
+
+    if (this.world.matrix[tileRow][tileCol] !== "air") {
+      return;
+    }
+
+    const tileCenterX = tileCol * this.world.tileSize + this.world.tileSize / 2;
+    const tileCenterY = tileRow * this.world.tileSize + this.world.tileSize / 2;
+
+    const deltaX = tileCenterX - playerCenterX;
+    const deltaY = tileCenterY - playerCenterY;
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+    if (distance > this.mineRange) {
+      return;
+    }
+
+    const blockBox = {
+      x: tileCol * this.world.tileSize,
+      y: tileRow * this.world.tileSize,
+      width: this.world.tileSize,
+      height: this.world.tileSize,
+    };
+    if (this.checkCollision(this.player, blockBox)) {
+      return;
+    }
+
+    const blockType = this.currentTool.replace("place-", "");
+
+    if (this.inventory[blockType] > 0) {
+      this.inventory[blockType]--;
+      this.updateInventoryUI();
+
+      this.world.matrix[tileRow][tileCol] = blockType;
       this.world.render();
     }
   }
@@ -370,7 +461,6 @@ class GameEngine {
     this.player.render();
     this.enemies.forEach((zombie) => zombie.render());
 
-    // Call camera centering updates immediately before the frame paints
     this.updateCamera();
 
     for (let key in this.keysPressed) {
