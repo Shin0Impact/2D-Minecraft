@@ -6,6 +6,34 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
+    <section id="landingPage" class="overlay-screen">
+      <div class="menu-card">
+        <h1 class="game-logo">MINECRAFT 2D</h1>
+        <div class="tutorial-box">
+          <h3>How to Play:</h3>
+          <ul>
+            <li><strong>Axe (🪓)</strong> removes Wood & Leaves</li>
+            <li><strong>Pickaxe (⛏️)</strong> removes Stone & Ores</li>
+            <li><strong>Shovel (🧹)</strong> removes Grass & Dirt</li>
+            <li><strong>Sword (⚔️)</strong> fights the Zombies!</li>
+            <li>
+              <strong>Left Click</strong> near your player to break or place
+              blocks.
+            </li>
+          </ul>
+        </div>
+        <button id="startGameBtn" class="mc-btn">Start Game</button>
+      </div>
+    </section>
+
+    <section id="gameOverScreen" class="overlay-screen hidden">
+      <div class="menu-card game-over-card">
+        <h1 class="game-over-text">Game Over</h1>
+        <p>You were defeated by a zombie!</p>
+        <button id="respawnBtn" class="mc-btn">Respawn & Reset</button>
+      </div>
+    </section>
+
     <section class="game-container">
       <main id="gameWindow">
         <section id="stage">
@@ -15,6 +43,10 @@
         </section>
 
         <section id="heartUI"></section>
+
+        <button id="resetWorldBtn" class="top-reset-btn" title="Reset World">
+          🔄
+        </button>
       </main>
 
       <footer id="toolBelt">

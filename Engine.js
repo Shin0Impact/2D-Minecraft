@@ -11,7 +11,7 @@ class GameEngine {
     this.invincibilityDuration = 1000;
 
     this.currentTool = "sword";
-    this.mineRange = 120; // Allows cleaner building angles around player borders
+    this.mineRange = 120;
 
     this.cameraX = 0;
     this.cameraY = 0;
@@ -46,15 +46,7 @@ class GameEngine {
     let spawnY = spawnRow * this.world.tileSize - 45;
     this.player = new Player(80, spawnY, this.world);
 
-    let enemySpawnRow = 0;
-    for (let r = 0; r < this.world.rows; r++) {
-      if (this.world.matrix[r][12] !== "air") {
-        enemySpawnRow = r;
-        break;
-      }
-    }
-    let enemySpawnY = enemySpawnRow * this.world.tileSize - 45;
-    this.enemies.push(new Enemy(480, enemySpawnY, "zombie", this.world));
+    this.spawnZombies();
 
     this.renderHearts();
     this.setupToolBelt();
@@ -77,9 +69,6 @@ class GameEngine {
       const worldX = screenX + this.cameraX;
       const worldY = screenY + this.cameraY;
 
-      const playerCenter = this.player.x + this.player.width / 2;
-      this.player.facing = worldX < playerCenter ? "left" : "right";
-
       if (this.currentTool === "sword") {
         this.executePlayerAttack();
       } else if (this.currentTool.startsWith("place-")) {
@@ -89,7 +78,73 @@ class GameEngine {
       }
     });
 
+    document.getElementById("startGameBtn").addEventListener("click", () => {
+      document.getElementById("landingPage").classList.add("hidden");
+    });
+
+    document.getElementById("respawnBtn").addEventListener("click", () => {
+      document.getElementById("gameOverScreen").classList.add("hidden");
+      this.resetWorld();
+    });
+
+    // Instant reset triggers without modal pop-ups and pops open instructions overlay screen
+    document.getElementById("resetWorldBtn").addEventListener("click", () => {
+      this.resetWorld();
+      document.getElementById("landingPage").classList.remove("hidden");
+    });
+
     this.tick();
+  }
+
+  spawnZombies() {
+    this.enemies.forEach((enemy) => enemy.DOMElement.remove());
+    this.enemies = [];
+
+    let enemySpawnRow = 0;
+    for (let r = 0; r < this.world.rows; r++) {
+      if (this.world.matrix[r][12] !== "air") {
+        enemySpawnRow = r;
+        break;
+      }
+    }
+    let enemySpawnY = enemySpawnRow * this.world.tileSize - 45;
+    this.enemies.push(new Enemy(480, enemySpawnY, "zombie", this.world));
+  }
+
+  resetWorld() {
+    this.playerHealth = this.maxHealth;
+    this.isInvincible = false;
+
+    for (const block in this.inventory) {
+      this.inventory[block] = 0;
+    }
+
+    this.world.DOMElement.innerHTML = "";
+    this.world.generate();
+    this.world.render();
+
+    let spawnRow = 0;
+    for (let r = 0; r < this.world.rows; r++) {
+      if (this.world.matrix[r][2] !== "air") {
+        spawnRow = r;
+        break;
+      }
+    }
+    this.player.x = 80;
+    this.player.y = spawnRow * this.world.tileSize - 45;
+    this.player.vx = 0;
+    this.player.vy = 0;
+    this.player.knockbackTimer = 0;
+
+    this.spawnZombies();
+    this.renderHearts();
+    this.updateInventoryUI();
+
+    const activeToolButton = document.querySelector(".tool-btn.active");
+    if (activeToolButton) activeToolButton.classList.remove("active");
+    this.currentTool = "sword";
+    const swordBtn = document.querySelector('[data-tool="sword"]');
+    if (swordBtn) swordBtn.classList.add("active");
   }
 
   setupToolBelt() {
@@ -110,15 +165,13 @@ class GameEngine {
         const count = this.inventory[item];
         counterElement.textContent = count;
 
-        // Grab the parent hotbar button slot
         const buttonSlot = counterElement.closest(".tool-btn");
         if (buttonSlot) {
           if (count > 0) {
-            buttonSlot.style.display = "flex"; // Show item slot when quantity > 0
+            buttonSlot.style.display = "flex";
           } else {
-            buttonSlot.style.display = "none"; // Hide item slot when quantity is 0
+            buttonSlot.style.display = "none";
 
-            // If the player is currently selecting this item block but ran out, switch back to sword safely
             if (this.currentTool === `place-${item}`) {
               buttonSlot.classList.remove("active");
               this.currentTool = "sword";
@@ -131,9 +184,10 @@ class GameEngine {
     }
   }
 
+  // Camera settings adjusted to map the new 1040x780 space boundaries correctly
   updateCamera() {
-    const viewWidth = 800;
-    const viewHeight = 600;
+    const viewWidth = 1040;
+    const viewHeight = 780;
 
     this.cameraX = this.player.x + this.player.width / 2 - viewWidth / 2;
     this.cameraY = this.player.y + this.player.height / 2 - viewHeight / 2;
@@ -159,20 +213,17 @@ class GameEngine {
       tileCol >= this.world.cols ||
       tileRow < 0 ||
       tileRow >= this.world.rows
-    ) {
+    )
       return;
-    }
 
     const tileCenterX = tileCol * this.world.tileSize + this.world.tileSize / 2;
     const tileCenterY = tileRow * this.world.tileSize + this.world.tileSize / 2;
 
-    const deltaX = tileCenterX - playerCenterX;
-    const deltaY = tileCenterY - playerCenterY;
-    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-
-    if (distance > this.mineRange) {
-      return;
-    }
+    const distance = Math.sqrt(
+      Math.pow(tileCenterX - playerCenterX, 2) +
+        Math.pow(tileCenterY - playerCenterY, 2),
+    );
+    if (distance > this.mineRange) return;
 
     const tileType = this.world.matrix[tileRow][tileCol];
     let canBreak = false;
@@ -208,7 +259,6 @@ class GameEngine {
         this.inventory[tileType]++;
         this.updateInventoryUI();
       }
-
       this.world.matrix[tileRow][tileCol] = "air";
       this.world.render();
     }
@@ -226,24 +276,18 @@ class GameEngine {
       tileCol >= this.world.cols ||
       tileRow < 0 ||
       tileRow >= this.world.rows
-    ) {
+    )
       return;
-    }
-
-    if (this.world.matrix[tileRow][tileCol] !== "air") {
-      return;
-    }
+    if (this.world.matrix[tileRow][tileCol] !== "air") return;
 
     const tileCenterX = tileCol * this.world.tileSize + this.world.tileSize / 2;
     const tileCenterY = tileRow * this.world.tileSize + this.world.tileSize / 2;
 
-    const deltaX = tileCenterX - playerCenterX;
-    const deltaY = tileCenterY - playerCenterY;
-    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-
-    if (distance > this.mineRange) {
-      return;
-    }
+    const distance = Math.sqrt(
+      Math.pow(tileCenterX - playerCenterX, 2) +
+        Math.pow(tileCenterY - playerCenterY, 2),
+    );
+    if (distance > this.mineRange) return;
 
     const blockBox = {
       x: tileCol * this.world.tileSize,
@@ -251,9 +295,7 @@ class GameEngine {
       width: this.world.tileSize,
       height: this.world.tileSize,
     };
-    if (this.checkCollision(this.player, blockBox)) {
-      return;
-    }
+    if (this.checkCollision(this.player, blockBox)) return;
 
     const blockType = this.currentTool.replace("place-", "");
 
@@ -268,8 +310,6 @@ class GameEngine {
 
   resolvePhysics(entity) {
     const tileSize = this.world.tileSize;
-
-    // --- HORIZONTAL AXIS ---
     entity.x += entity.vx;
 
     let checkYPoints = [
@@ -281,20 +321,17 @@ class GameEngine {
     if (entity.vx > 0) {
       let rightX = entity.x + entity.width;
       if (checkYPoints.some((y) => this.world.isTileSolidAt(rightX, y))) {
-        let tileCol = Math.floor(rightX / tileSize);
-        entity.x = tileCol * tileSize - entity.width;
+        entity.x = Math.floor(rightX / tileSize) * tileSize - entity.width;
         entity.vx = 0;
       }
     } else if (entity.vx < 0) {
       let leftX = entity.x;
       if (checkYPoints.some((y) => this.world.isTileSolidAt(leftX, y))) {
-        let tileCol = Math.floor(leftX / tileSize);
-        entity.x = (tileCol + 1) * tileSize;
+        entity.x = (Math.floor(leftX / tileSize) + 1) * tileSize;
         entity.vx = 0;
       }
     }
 
-    // --- VERTICAL AXIS ---
     let previousY = entity.y;
     entity.y += entity.vy;
     entity.isGrounded = false;
@@ -312,13 +349,11 @@ class GameEngine {
       for (let x of checkXPoints) {
         if (this.world.isTileSolidAt(x, feetY, true)) {
           let isLeaf = this.world.getTileTypeAt?.(x, feetY) === "leaves";
-
           if (isLeaf) {
-            let priorFeetY = previousY + entity.height;
-            let tileRow = Math.floor(feetY / tileSize);
-            let leafTopY = tileRow * tileSize;
-
-            if (priorFeetY <= leafTopY) {
+            if (
+              previousY + entity.height <=
+              Math.floor(feetY / tileSize) * tileSize
+            ) {
               hitSolidGround = true;
               break;
             }
@@ -330,16 +365,14 @@ class GameEngine {
       }
 
       if (hitSolidGround) {
-        let tileRow = Math.floor(feetY / tileSize);
-        entity.y = tileRow * tileSize - entity.height;
+        entity.y = Math.floor(feetY / tileSize) * tileSize - entity.height;
         entity.vy = 0;
         entity.isGrounded = true;
       }
     } else if (entity.vy < 0) {
       let headY = entity.y;
       if (checkXPoints.some((x) => this.world.isTileSolidAt(x, headY))) {
-        let tileRow = Math.floor(headY / tileSize);
-        entity.y = (tileRow + 1) * tileSize;
+        entity.y = (Math.floor(headY / tileSize) + 1) * tileSize;
         entity.vy = 0;
       }
     }
@@ -362,8 +395,7 @@ class GameEngine {
       if (this.checkCollision(attackHitbox, enemy)) {
         enemy.health--;
         if (enemy.health > 0) {
-          let pushDirection = this.player.facing === "right" ? 1 : -1;
-          enemy.applyKnockback(pushDirection);
+          enemy.applyKnockback(this.player.facing === "right" ? 1 : -1);
         } else {
           enemy.DOMElement.remove();
           this.enemies.splice(i, 1);
@@ -374,11 +406,6 @@ class GameEngine {
 
   renderHearts() {
     let heartUI = document.getElementById("heartUI");
-    if (!heartUI) {
-      heartUI = document.createElement("section");
-      heartUI.id = "heartUI";
-      document.getElementById("gameWindow").appendChild(heartUI);
-    }
     heartUI.innerHTML = "";
     for (let i = 0; i < this.maxHealth; i++) {
       const heart = document.createElement("span");
@@ -403,21 +430,13 @@ class GameEngine {
     this.renderHearts();
 
     if (this.playerHealth <= 0) {
-      alert("Game Over!");
-      this.playerHealth = this.maxHealth;
-      this.player.x = 80;
-      this.player.y = 100;
-      this.player.vx = 0;
-      this.player.vy = 0;
-      this.player.knockbackTimer = 0;
-      this.renderHearts();
+      document.getElementById("gameOverScreen").classList.remove("hidden");
     } else {
-      const playerCenter = this.player.x + this.player.width / 2;
-      const enemyCenter = enemy.x + enemy.width / 2;
-      const pushDirection = playerCenter < enemyCenter ? -1 : 1;
-
-      this.player.applyKnockback(pushDirection);
-
+      this.player.applyKnockback(
+        this.player.x + this.player.width / 2 < enemy.x + enemy.width / 2
+          ? -1
+          : 1,
+      );
       this.isInvincible = true;
       this.player.DOMElement.classList.add("damaged");
       setTimeout(() => {
@@ -428,45 +447,45 @@ class GameEngine {
   }
 
   tick() {
-    this.player.update(this.keysPressed);
-    this.enemies.forEach((zombie) => zombie.update(this.player));
+    const screensUp =
+      !document.getElementById("landingPage").classList.contains("hidden") ||
+      !document.getElementById("gameOverScreen").classList.contains("hidden");
 
-    this.resolvePhysics(this.player);
-    this.enemies.forEach((zombie) => this.resolvePhysics(zombie));
+    if (!screensUp) {
+      this.player.update(this.keysPressed);
+      this.enemies.forEach((zombie) => zombie.update(this.player));
 
-    this.enemies.forEach((enemy) => {
-      let handHeight = 10;
-      let targetY = enemy.y + enemy.height / 3;
-      let targetX =
-        enemy.facing === "right"
-          ? enemy.x + enemy.width / 2
-          : enemy.x + enemy.width / 2 - enemy.attackRange;
+      this.resolvePhysics(this.player);
+      this.enemies.forEach((zombie) => this.resolvePhysics(zombie));
 
-      let enemyAttackBox = {
-        x: targetX,
-        y: targetY,
-        width: enemy.attackRange,
-        height: handHeight,
-      };
+      this.enemies.forEach((enemy) => {
+        let enemyAttackBox = {
+          x:
+            enemy.facing === "right"
+              ? enemy.x + enemy.width / 2
+              : enemy.x + enemy.width / 2 - enemy.attackRange,
+          y: enemy.y + enemy.height / 3,
+          width: enemy.attackRange,
+          height: 10,
+        };
 
-      if (
-        this.checkCollision(this.player, enemyAttackBox) &&
-        enemy.attackCooldown === 0
-      ) {
-        this.takeDamage(enemy);
-        enemy.attackCooldown = enemy.attackRate;
-      }
-    });
+        if (
+          this.checkCollision(this.player, enemyAttackBox) &&
+          enemy.attackCooldown === 0
+        ) {
+          this.takeDamage(enemy);
+          enemy.attackCooldown = enemy.attackRate;
+        }
+      });
+    }
 
     this.player.render();
     this.enemies.forEach((zombie) => zombie.render());
-
     this.updateCamera();
 
     for (let key in this.keysPressed) {
-      if (this.keysPressed[key] === "JUST_PRESSED") {
+      if (this.keysPressed[key] === "JUST_PRESSED")
         this.keysPressed[key] = "HELD";
-      }
     }
 
     requestAnimationFrame(() => this.tick());
