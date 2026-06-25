@@ -51,6 +51,7 @@ class WorldGrid {
         { row: floorRow - 5, col: 12, type: "leaves" },
         { row: floorRow - 5, col: 13, type: "leaves" },
         { row: floorRow - 5, col: 14, type: "leaves" },
+        { row: floorRow - 6, col: 13, type: "leaves" },
       ],
       // Deep resource deposits scattered inside lower stone layers
       coalVeins: [
