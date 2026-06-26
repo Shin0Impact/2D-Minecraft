@@ -203,13 +203,39 @@ class GameEngine {
   spawnZombies() {
     this.enemies.forEach((e) => e.DOMElement.remove());
     this.enemies = [];
-    const spawnCol = 12;
-    const spawnRow = this.world.getSurfaceRow(spawnCol);
+
+    // 1. Zombie - Original Spawning Column (Col 12)
+    const zombieCol = 12;
+    const zombieRow = this.world.getSurfaceRow(zombieCol);
     this.enemies.push(
       new Enemy(
-        spawnCol * this.world.tileSize,
-        spawnRow * this.world.tileSize - 45,
+        zombieCol * this.world.tileSize,
+        zombieRow * this.world.tileSize - 45,
         "zombie",
+        this.world,
+      ),
+    );
+
+    // 2. Archer Goblin - Spawned slightly further right (Col 16)
+    const goblinCol = 16;
+    const goblinRow = this.world.getSurfaceRow(goblinCol);
+    this.enemies.push(
+      new Enemy(
+        goblinCol * this.world.tileSize,
+        goblinRow * this.world.tileSize - 45,
+        "goblin",
+        this.world,
+      ),
+    );
+
+    // 3. Skeleton - Spawned further out to the right (Col 20)
+    const skeletonCol = 20;
+    const skeletonRow = this.world.getSurfaceRow(skeletonCol);
+    this.enemies.push(
+      new Enemy(
+        skeletonCol * this.world.tileSize,
+        skeletonRow * this.world.tileSize - 45,
+        "skeleton",
         this.world,
       ),
     );

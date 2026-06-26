@@ -261,6 +261,28 @@ body[data-theme="snow"] .air {
   background-image: url("Assets/SkeletonWalk.gif");
 }
 
+/* --- Archer Goblin Asset Styling --- */
+.enemy.goblin {
+  background-image: url("Assets/Goblin_Archer.png");
+}
+
+.enemy.goblin.walking {
+  background-image: url("Assets/Goblin_ArcherWalk.gif");
+}
+
+/* --- Projectile Layout Sizing --- */
+.arrow-projectile {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background-color: #f312ef;
+  background-image: url("Assets/Arrow.png");
+  background-size: 100% 100%;
+  border-radius: 50%;
+  z-index: 999;
+  pointer-events: none;
+}
+
 /* ═══════════════════════════════════════════════════
    HEARTS UI
 ═══════════════════════════════════════════════════ */
