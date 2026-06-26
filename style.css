@@ -200,8 +200,8 @@ body[data-theme="snow"] .air {
   opacity: 0.7;
 }
 
-#playerSprite.submerged {
-  filter: hue-rotate(200deg) saturate(1.5) brightness(0.8);
+.submerged {
+  filter: sepia(100%) hue-rotate(190deg) saturate(300%) brightness(0.8);
   opacity: 0.85;
 }
 
@@ -238,18 +238,32 @@ body[data-theme="snow"] .air {
   position: absolute;
   width: 30px;
   height: 45px;
-  z-index: 5;
-  background-size: cover;
-  image-rendering: pixelated;
+  background-repeat: no-repeat;
+  background-position: bottom center;
+  background-size: 100% 100%;
 }
 
+/* --- Zombie Styling --- */
 .enemy.zombie {
   background-image: url("Assets/Zombie.png");
 }
 
+.enemy.zombie.walking {
+  background-image: url("Assets/ZombieWalk.gif");
+}
+
+/* --- Skeleton Styling --- */
+.enemy.skeleton {
+  background-image: url("Assets/Skeleton.png");
+}
+
+.enemy.skeleton.walking {
+  background-image: url("Assets/SkeletonWalk.gif");
+}
+
 /* ═══════════════════════════════════════════════════
    HEARTS UI
-════════════════════════════════════════════════════ */
+═══════════════════════════════════════════════════ */
 
 #heartUI {
   position: absolute;

@@ -29,31 +29,38 @@ class PhysicsSystem {
     // ── Water state detection ───────────────────────────────────────────────
     const inWater = this._isEntityInWater(entity);
 
-    if (isPlayer) {
-      entity.isInWater = inWater;
+    // FIX: Apply water state flags to ALL entities, not just the player
+    entity.isInWater = inWater;
 
-      // Snow theme: water is frozen — treat as solid, set frozen flag
-      if (inWater && theme === "snow") {
-        entity.isFrozen = true;
-        entity.vx = 0;
-        entity.vy = 0;
-        return; // don't move at all while frozen solid
-      } else {
-        entity.isFrozen = false;
-      }
-
-      // Forest theme: swimming
+    if (entity.DOMElement) {
       if (inWater && theme === "forest") {
-        if (entity.swimmingUp) {
-          // Holding space — strong upward pull, no gravity this frame
-          entity.vy = -4.5;
-        } else {
-          // Not holding space — gentle sink with heavy drag
-          entity.vy += entity.gravity * 0.15;
-          entity.vy = Math.min(entity.vy, 1.2);
-        }
-        entity.vx *= 0.82; // water drag on horizontal
+        entity.DOMElement.classList.add("submerged");
+      } else {
+        entity.DOMElement.classList.remove("submerged");
       }
+    }
+
+    // Snow theme: water is frozen — treat as solid, set frozen flag
+    if (inWater && theme === "snow") {
+      if (isPlayer) entity.isFrozen = true;
+      entity.vx = 0;
+      entity.vy = 0;
+      return; // don't move at all while frozen solid
+    } else {
+      if (isPlayer) entity.isFrozen = false;
+    }
+
+    // Forest theme: swimming math now processed globally for player & enemies
+    if (inWater && theme === "forest") {
+      if (entity.swimmingUp) {
+        // Holding space / swimming intent — strong upward pull, no gravity this frame
+        entity.vy = -4.5;
+      } else {
+        // Not holding space — gentle sink with heavy drag
+        entity.vy += entity.gravity * 0.15;
+        entity.vy = Math.min(entity.vy, 1.2);
+      }
+      entity.vx *= 0.82; // water drag on horizontal
     }
 
     // ── Horizontal movement ─────────────────────────────────────────────────
@@ -84,10 +91,8 @@ class PhysicsSystem {
     }
 
     // ── Vertical movement ───────────────────────────────────────────────────
-    // For non-player entities gravity is always applied here
-    if (!isPlayer) {
-      entity.vy += entity.gravity;
-    }
+    // FIX: Removed the duplicate 'entity.vy += entity.gravity;' command block
+    // that forced double gravity accumulation onto non-player objects.
 
     const previousY = entity.y;
     entity.y += entity.vy;
