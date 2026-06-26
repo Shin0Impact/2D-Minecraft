@@ -18,8 +18,8 @@ class WorldGrid {
     }
     this._buildTerrain();
     this._carveCavePockets();
-    this._placeWaterPools();
-    this._placeTrees();
+    this._placeWaterPools(); // Completely overwrites the profile across the lake bed and shores!
+    this._placeTrees(); // Trees now read the corrected flat profile safely!
     this._placeSurfaceRocks();
     this._placeUndergroundOres();
   }
@@ -63,10 +63,8 @@ class WorldGrid {
   // ─── Cave pockets ─────────────────────────────────────────────────────────
 
   _carveCavePockets() {
-    // Random-walk tunnels scattered throughout the underground
     const NUM_CAVES = 18;
     for (let t = 0; t < NUM_CAVES; t++) {
-      // Start somewhere underground (below dirt layer)
       const startC = 2 + Math.floor(Math.random() * (this.cols - 4));
       const floorR = this._floorProfile[startC];
       const startR =
@@ -75,18 +73,17 @@ class WorldGrid {
       let r = startR,
         c = startC;
       const steps = 25 + Math.floor(Math.random() * 40);
-      const radius = 1 + Math.floor(Math.random() * 2); // 1 = narrow, 2 = wide
+      const radius = 1 + Math.floor(Math.random() * 2);
 
       for (let s = 0; s < steps; s++) {
-        // Carve a blob at current position
         for (let dr = -radius; dr <= radius; dr++) {
           for (let dc = -radius; dc <= radius; dc++) {
-            if (dr * dr + dc * dc > radius * radius + 0.5) continue; // circle shape
+            if (dr * dr + dc * dc > radius * radius + 0.5) continue;
             const nr = r + dr,
               nc = c + dc;
             if (
-              nr > floorR + 4 && // never break through to surface
-              nr < this.rows - 1 && // keep bedrock row intact
+              nr > floorR + 4 &&
+              nr < this.rows - 1 &&
               nc >= 0 &&
               nc < this.cols &&
               this.matrix[nr][nc] === "stone"
@@ -95,7 +92,6 @@ class WorldGrid {
             }
           }
         }
-        // Drift in a mostly-horizontal direction
         const roll = Math.random();
         if (roll < 0.4) c = Math.min(this.cols - 1, c + 1);
         else if (roll < 0.8) c = Math.max(0, c - 1);
@@ -105,27 +101,57 @@ class WorldGrid {
     }
   }
 
-  // ─── Water pools ──────────────────────────────────────────────────────────
+  // ─── Water pools (FIXED: Flattened profiles with clear columns) ───────────
 
   _placeWaterPools() {
-    // Desert has no water — it evaporates
     if (this.theme === "desert") return;
-    for (let c = 2; c < this.cols - 2; c++) {
+
+    for (let c = 2; c < this.cols - 7; c++) {
       const here = this._floorProfile[c];
       const left = this._floorProfile[c - 1];
       const right = this._floorProfile[c + 1];
-      // A "dip" is where this column is lower than both neighbours
+
+      // Found a natural dip to drop a lake into
       if (here >= left && here >= right && Math.random() < 0.35) {
-        // Fill pool width
-        const poolW = 1 + Math.floor(Math.random() * 3);
-        for (let dc = 0; dc < poolW && c + dc < this.cols - 1; dc++) {
-          const pr = this._floorProfile[c + dc];
-          if (this.matrix[pr][c + dc] !== "air") {
-            this.matrix[pr][c + dc] = "water";
-            this.matrix[pr + 1][c + dc] = "water";
+        const poolW = 3 + Math.floor(Math.random() * 4); // Wider lakes (3 to 6 tiles wide)
+        const targetHeight = this._floorProfile[c - 1]; // Use left bank height as baseline
+
+        // Calculate full boundaries including 1 padding land block on each side
+        const startIdx = c - 1;
+        const endIdx = c + poolW;
+
+        // STEP 1: Flatten the master profile tracker array for this entire segment
+        for (let i = startIdx; i <= endIdx; i++) {
+          this._floorProfile[i] = targetHeight;
+        }
+
+        // STEP 2: Clear any floating dirt/cliffs completely above this flat baseline
+        for (let i = startIdx; i <= endIdx; i++) {
+          for (let r = 0; r < targetHeight; r++) {
+            this.matrix[r][i] = "air";
           }
         }
-        c += poolW; // skip ahead so pools don't stack
+
+        // STEP 3: Re-apply solid ground tile to the left and right shore blocks
+        const landType = this.theme === "snow" ? "snow" : "grass";
+        const subType = this.theme === "desert" ? "sand" : "dirt";
+
+        this.matrix[targetHeight][startIdx] = landType;
+        this.matrix[targetHeight][endIdx] = landType;
+
+        // STEP 4: Fill the inner columns with two blocks of water and solid lakebed dirt
+        for (let i = c; i < c + poolW; i++) {
+          this.matrix[targetHeight][i] = "water";
+
+          if (targetHeight + 1 < this.rows) {
+            this.matrix[targetHeight + 1][i] = "water";
+          }
+          if (targetHeight + 2 < this.rows) {
+            this.matrix[targetHeight + 2][i] = subType; // Smooth layout bed floor underneath water
+          }
+        }
+
+        c = endIdx; // Advance generation loop index past this lake area safely
       }
     }
 
@@ -134,13 +160,11 @@ class WorldGrid {
     for (let i = 0; i < UNDERGROUND_POOLS; i++) {
       const c = 2 + Math.floor(Math.random() * (this.cols - 4));
       const floorR = this._floorProfile[c];
-      // Find a cave air pocket somewhere mid-underground
       const startR =
         floorR + 8 + Math.floor(Math.random() * (this.rows - floorR - 14));
-      // Look downward for the floor of a cave pocket
+
       for (let r = startR; r < this.rows - 2; r++) {
         if (this.matrix[r][c] === "air" && this.matrix[r + 1][c] === "stone") {
-          // Place a small puddle
           const poolW = 1 + Math.floor(Math.random() * 3);
           for (let dc = 0; dc < poolW && c + dc < this.cols - 1; dc++) {
             if (
@@ -307,7 +331,6 @@ class WorldGrid {
     if (row < 0 || row >= this.rows) return false;
     const tile = this.matrix[row][col];
     if (allowLeaves && tile === "leaves") return true;
-    // Snow: frozen water is solid. Forest/desert: water is passable.
     if (tile === "water") return theme === "snow";
     return !["air", "leaves", "wood"].includes(tile);
   }

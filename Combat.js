@@ -30,7 +30,7 @@ class CombatSystem {
     for (let i = engine.enemies.length - 1; i >= 0; i--) {
       let enemy = engine.enemies[i];
       if (engine.physics.checkCollision(attackHitbox, enemy)) {
-        enemy.health--;
+        enemy.health -= 2;
         if (enemy.health > 0) {
           enemy.applyKnockback(engine.player.facing === "right" ? 1 : -1);
         } else {
@@ -52,8 +52,7 @@ class CombatSystem {
       document.getElementById("gameOverScreen").classList.remove("hidden");
     } else {
       engine.player.applyKnockback(
-        engine.player.x + engine.player.width / 2 <
-          enemy.x + enemy.width / 2
+        engine.player.x + engine.player.width / 2 < enemy.x + enemy.width / 2
           ? -1
           : 1,
       );
