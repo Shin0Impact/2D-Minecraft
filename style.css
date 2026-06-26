@@ -1,30 +1,21 @@
 /* ═══════════════════════════════════════════════════
-   THEME SYSTEM — all tile colours route through vars
-   body[data-theme="forest|desert|cave"]
+   THEME SYSTEM — sky colour driven by CSS variable
+   body[data-theme="forest|desert|snow"]
 ════════════════════════════════════════════════════ */
 
 body[data-theme="forest"] {
   --sky-color: #74b9ff;
-  --grass-img: url("Assets/Grass.png");
-  --dirt-img:  url("Assets/Dirt.png");
-  --stone-img: url("Assets/Stone.png");
-  --sky-bg:    #74b9ff;
+  --air-color: #74b9ff;
 }
 
 body[data-theme="desert"] {
-  --sky-color: #f9ca24;
-  --grass-img: url("Assets/Sand.png");    /* sand surface */
-  --dirt-img:  url("Assets/Sand.png");
-  --stone-img: url("Assets/Stone.png");
-  --sky-bg:    #f9ca24;
+  --sky-color: #e8b84b;
+  --air-color: #e8b84b;
 }
 
-body[data-theme="cave"] {
-  --sky-color: #1e272e;
-  --grass-img: url("Assets/Snow.png");
-  --dirt-img:  url("Assets/Dirt.png");
-  --stone-img: url("Assets/Stone.png");
-  --sky-bg:    #1e272e;
+body[data-theme="snow"] {
+  --sky-color: #c8dff0;
+  --air-color: #c8dff0;
 }
 
 /* ═══════════════════════════════════════════════════
@@ -90,15 +81,35 @@ body {
 
 /* ─── Tile break animation ───────────────────────── */
 @keyframes tileBreak {
-  0%   { transform: scale(1);    opacity: 1; filter: brightness(1); }
-  40%  { transform: scale(1.15); opacity: 0.9; filter: brightness(2); }
-  100% { transform: scale(0);    opacity: 0; }
+  0% {
+    transform: scale(1);
+    opacity: 1;
+    filter: brightness(1);
+  }
+  40% {
+    transform: scale(1.15);
+    opacity: 0.9;
+    filter: brightness(2);
+  }
+  100% {
+    transform: scale(0);
+    opacity: 0;
+  }
 }
 
 @keyframes tilePlace {
-  0%   { transform: scale(0.5); opacity: 0.4; }
-  70%  { transform: scale(1.1); opacity: 1; }
-  100% { transform: scale(1);   opacity: 1; }
+  0% {
+    transform: scale(0.5);
+    opacity: 0.4;
+  }
+  70% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .tile-break {
@@ -111,23 +122,60 @@ body {
 }
 
 /* ─── Tile textures ──────────────────────────────── */
-.air      { background-color: var(--sky-color, #74b9ff); }
-.grass    { background-image: url("Assets/Grass.png"); }
-.dirt     { background-image: url("Assets/Dirt.png"); }
-.stone    { background-image: url("Assets/Stone.png"); }
-.wood     { background-image: url("Assets/Wood.png"); }
-.leaves   { background-image: url("Assets/Leaves.png"); }
-.sand     { background-image: url("Assets/Sand.png"); background-color: #f0c060; }
-.snow     { background-image: url("Assets/Snow.png"); background-color: #dfe6e9; }
-.coal     { background-image: url("Assets/Coal.png");    background-color: #353b48; }
-.iron     { background-image: url("Assets/Iron.png");    background-color: #dcdde1; }
-.gold     { background-image: url("Assets/Gold.png");    background-color: #fbc531; }
-.diamond  { background-image: url("Assets/Diamond.png"); background-color: #00cec9; }
-.water    { background-image: url("Assets/Water.png");   background-color: #0984e3; }
+.air {
+  background-color: var(--sky-color, #74b9ff);
+}
+.grass {
+  background-image: url("Assets/Grass.png");
+}
+.dirt {
+  background-image: url("Assets/Dirt.png");
+}
+.stone {
+  background-image: url("Assets/Stone.png");
+}
+.wood {
+  background-image: url("Assets/Wood.png");
+}
+.leaves {
+  background-image: url("Assets/Leaves.png");
+}
+.sand {
+  background-image: url("Assets/Sand.png");
+  background-color: #f0c060;
+}
+.snow {
+  background-image: url("Assets/Snow.png");
+  background-color: #dfe6e9;
+}
+.coal {
+  background-image: url("Assets/Coal.png");
+  background-color: #353b48;
+}
+.iron {
+  background-image: url("Assets/Iron.png");
+  background-color: #dcdde1;
+}
+.gold {
+  background-image: url("Assets/Gold.png");
+  background-color: #fbc531;
+}
+.diamond {
+  background-image: url("Assets/Diamond.png");
+  background-color: #00cec9;
+}
+.water {
+  background-image: url("Assets/Water.png");
+  background-color: #0984e3;
+}
 
-/* Desert theme overrides — sky + air tile colour */
-body[data-theme="desert"] .air   { background-color: #f9ca24; }
-body[data-theme="cave"]   .air   { background-color: #1e272e; }
+/* Per-theme air tile colour — matches the sky variable */
+body[data-theme="desert"] .air {
+  background-color: #e8b84b;
+}
+body[data-theme="snow"] .air {
+  background-color: #c8dff0;
+}
 
 /* ═══════════════════════════════════════════════════
    PLAYER & ENEMIES
@@ -148,6 +196,40 @@ body[data-theme="cave"]   .air   { background-color: #1e272e; }
   opacity: 0.7;
 }
 
+#playerSprite.submerged {
+  filter: hue-rotate(200deg) saturate(1.5) brightness(0.8);
+  opacity: 0.85;
+}
+
+#playerSprite.frozen {
+  filter: hue-rotate(180deg) saturate(2) brightness(1.1);
+  opacity: 0.9;
+}
+
+/* Evaporation effect for water placed in desert */
+@keyframes tileEvaporate {
+  0% {
+    opacity: 1;
+    filter: brightness(1.5) blur(0px);
+    transform: scale(1);
+  }
+  60% {
+    opacity: 0.6;
+    filter: brightness(3) blur(1px);
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    filter: brightness(4) blur(3px);
+    transform: scale(0.5);
+  }
+}
+
+.tile-evaporate {
+  animation: tileEvaporate 0.4s ease-out forwards;
+  pointer-events: none;
+}
+
 .enemy {
   position: absolute;
   width: 30px;
@@ -157,7 +239,9 @@ body[data-theme="cave"]   .air   { background-color: #1e272e; }
   image-rendering: pixelated;
 }
 
-.enemy.zombie { background-image: url("Assets/Zombie.png"); }
+.enemy.zombie {
+  background-image: url("Assets/Zombie.png");
+}
 
 /* ═══════════════════════════════════════════════════
    HEARTS UI
@@ -180,8 +264,12 @@ body[data-theme="cave"]   .air   { background-color: #1e272e; }
   background-repeat: no-repeat;
   image-rendering: pixelated;
 }
-.heart.full  { background-image: url("Assets/Heart_Full.png"); }
-.heart.empty { background-image: url("Assets/Heart_Empty.png"); }
+.heart.full {
+  background-image: url("Assets/Heart_Full.png");
+}
+.heart.empty {
+  background-image: url("Assets/Heart_Empty.png");
+}
 
 /* ═══════════════════════════════════════════════════
    RESET BUTTON (top right)
@@ -197,15 +285,23 @@ body[data-theme="cave"]   .air   { background-color: #1e272e; }
   border: 3px solid #373737;
   border-top-color: #8b8b8b;
   border-left-color: #8b8b8b;
-  box-shadow: inset -2px -2px 0px rgba(0,0,0,0.4), 2px 2px 10px rgba(0,0,0,0.3);
+  box-shadow:
+    inset -2px -2px 0px rgba(0, 0, 0, 0.4),
+    2px 2px 10px rgba(0, 0, 0, 0.3);
   padding: 10px 16px;
   font-family: inherit;
   font-weight: bold;
   font-size: 15px;
   cursor: pointer;
 }
-.top-reset-btn:hover  { background-color: rgba(160,160,160,0.95); border-color: #fff; }
-.top-reset-btn:active { border: 3px solid #1a1a1a; box-shadow: inset 2px 2px 0px rgba(0,0,0,0.6); }
+.top-reset-btn:hover {
+  background-color: rgba(160, 160, 160, 0.95);
+  border-color: #fff;
+}
+.top-reset-btn:active {
+  border: 3px solid #1a1a1a;
+  box-shadow: inset 2px 2px 0px rgba(0, 0, 0, 0.6);
+}
 
 /* ═══════════════════════════════════════════════════
    HOTBAR
@@ -217,7 +313,9 @@ body[data-theme="cave"]   .air   { background-color: #1e272e; }
   border: 4px solid #4a4a4a;
   padding: 4px;
   gap: 4px;
-  box-shadow: inset -2px -2px 0px #2c2c2c, inset 2px 2px 0px #ffffff;
+  box-shadow:
+    inset -2px -2px 0px #2c2c2c,
+    inset 2px 2px 0px #ffffff;
   align-items: center;
 }
 
@@ -225,11 +323,11 @@ body[data-theme="cave"]   .air   { background-color: #1e272e; }
   position: relative;
   width: 50px;
   height: 50px;
-  background-color: rgba(139,139,139,0.5);
+  background-color: rgba(139, 139, 139, 0.5);
   border: 2px solid #373737;
   border-top-color: #8b8b8b;
   border-left-color: #8b8b8b;
-  box-shadow: inset -2px -2px 0px rgba(0,0,0,0.2);
+  box-shadow: inset -2px -2px 0px rgba(0, 0, 0, 0.2);
   cursor: pointer;
   display: flex;
   justify-content: center;
@@ -242,7 +340,7 @@ body[data-theme="cave"]   .air   { background-color: #1e272e; }
 .tool-btn.active {
   border: 4px solid #ffffff;
   box-shadow: inset 0px 0px 4px #000000;
-  background-color: rgba(254,254,254,0.25);
+  background-color: rgba(254, 254, 254, 0.25);
   z-index: 2;
   width: 50px;
   height: 50px;
@@ -255,19 +353,45 @@ body[data-theme="cave"]   .air   { background-color: #1e272e; }
   height: 26px;
   background-size: cover;
   image-rendering: pixelated;
-  border: 1px solid rgba(0,0,0,0.15);
+  border: 1px solid rgba(0, 0, 0, 0.15);
 }
 
-.grass-preview   { background-image: url("Assets/Grass.png"); }
-.dirt-preview    { background-image: url("Assets/Dirt.png"); }
-.stone-preview   { background-image: url("Assets/Stone.png"); }
-.wood-preview    { background-image: url("Assets/Wood.png"); }
-.coal-preview    { background-image: url("Assets/Coal.png");    background-color: #353b48; }
-.iron-preview    { background-image: url("Assets/Iron.png");    background-color: #dcdde1; }
-.gold-preview    { background-image: url("Assets/Gold.png");    background-color: #fbc531; }
-.diamond-preview { background-image: url("Assets/Diamond.png"); background-color: #00cec9; }
-.sand-preview    { background-image: url("Assets/Sand.png");    background-color: #f0c060; }
-.snow-preview    { background-image: url("Assets/Snow.png");    background-color: #dfe6e9; }
+.grass-preview {
+  background-image: url("Assets/Grass.png");
+}
+.dirt-preview {
+  background-image: url("Assets/Dirt.png");
+}
+.stone-preview {
+  background-image: url("Assets/Stone.png");
+}
+.wood-preview {
+  background-image: url("Assets/Wood.png");
+}
+.coal-preview {
+  background-image: url("Assets/Coal.png");
+  background-color: #353b48;
+}
+.iron-preview {
+  background-image: url("Assets/Iron.png");
+  background-color: #dcdde1;
+}
+.gold-preview {
+  background-image: url("Assets/Gold.png");
+  background-color: #fbc531;
+}
+.diamond-preview {
+  background-image: url("Assets/Diamond.png");
+  background-color: #00cec9;
+}
+.sand-preview {
+  background-image: url("Assets/Sand.png");
+  background-color: #f0c060;
+}
+.snow-preview {
+  background-image: url("Assets/Snow.png");
+  background-color: #dfe6e9;
+}
 
 .item-count {
   position: absolute;
@@ -286,7 +410,8 @@ body[data-theme="cave"]   .air   { background-color: #1e272e; }
 
 .overlay-screen {
   position: fixed;
-  top: 0; left: 0;
+  top: 0;
+  left: 0;
   width: 100vw;
   height: 100vh;
   z-index: 2000;
@@ -294,21 +419,24 @@ body[data-theme="cave"]   .air   { background-color: #1e272e; }
   justify-content: center;
   align-items: center;
   backdrop-filter: blur(10px);
-  background-color: rgba(0,0,0,0.65);
+  background-color: rgba(0, 0, 0, 0.65);
   transition: opacity 0.3s ease;
 }
 
 #gameOverScreen {
-  background-color: rgba(139,0,0,0.45);
+  background-color: rgba(139, 0, 0, 0.45);
   backdrop-filter: blur(6px);
 }
 
-.hidden { opacity: 0; pointer-events: none; }
+.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
 
 .menu-card {
   background-color: #2c3e50;
   border: 4px solid #1a252f;
-  box-shadow: 0 16px 40px rgba(0,0,0,0.6);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
   padding: 30px;
   text-align: center;
   max-width: 540px;
@@ -316,7 +444,7 @@ body[data-theme="cave"]   .air   { background-color: #1e272e; }
 }
 
 .game-over-card {
-  background-color: rgba(30,0,0,0.9);
+  background-color: rgba(30, 0, 0, 0.9);
   border-color: #ff0000;
 }
 
@@ -342,9 +470,17 @@ body[data-theme="cave"]   .air   { background-color: #1e272e; }
   text-align: left;
   margin-bottom: 20px;
 }
-.tutorial-box h3 { margin-top: 0; color: #f1c40f; }
-.tutorial-box ul { padding-left: 20px; margin-bottom: 0; }
-.tutorial-box li { margin-bottom: 8px; }
+.tutorial-box h3 {
+  margin-top: 0;
+  color: #f1c40f;
+}
+.tutorial-box ul {
+  padding-left: 20px;
+  margin-bottom: 0;
+}
+.tutorial-box li {
+  margin-bottom: 8px;
+}
 
 /* ─── Picker rows (theme + world type) ──────────── */
 .picker-row {
@@ -372,7 +508,9 @@ body[data-theme="cave"]   .air   { background-color: #1e272e; }
   cursor: pointer;
   transition: background-color 0.15s;
 }
-.picker-btn:hover  { background-color: #5d7a94; }
+.picker-btn:hover {
+  background-color: #5d7a94;
+}
 .picker-btn.active {
   background-color: #2ecc71;
   color: #1a1a1a;
@@ -391,4 +529,6 @@ body[data-theme="cave"]   .air   { background-color: #1e272e; }
   cursor: pointer;
   box-shadow: inset -3px -3px 0px #2c3e50;
 }
-.mc-btn:hover { background-color: #95a5a6; }
+.mc-btn:hover {
+  background-color: #95a5a6;
+}

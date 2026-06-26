@@ -12,72 +12,127 @@ class PhysicsSystem {
     );
   }
 
+  // Returns true if the entity's centre is inside a water tile
+  _isEntityInWater(entity) {
+    const world = this.engine.world;
+    const cx = entity.x + entity.width / 2;
+    const cy = entity.y + entity.height / 2;
+    return world.getTileTypeAt(cx, cy) === "water";
+  }
+
   resolvePhysics(entity) {
     const world = this.engine.world;
+    const theme = this.engine.currentTheme;
     const tileSize = world.tileSize;
+    const isPlayer = entity === this.engine.player;
 
+    // ── Water state detection ───────────────────────────────────────────────
+    const inWater = this._isEntityInWater(entity);
+
+    if (isPlayer) {
+      entity.isInWater = inWater;
+
+      // Snow theme: water is frozen — treat as solid, set frozen flag
+      if (inWater && theme === "snow") {
+        entity.isFrozen = true;
+        entity.vx = 0;
+        entity.vy = 0;
+        return; // don't move at all while frozen solid
+      } else {
+        entity.isFrozen = false;
+      }
+
+      // Forest theme: swimming
+      if (inWater && theme === "forest") {
+        if (entity.swimmingUp) {
+          // Holding space — strong upward pull, no gravity this frame
+          entity.vy = -4.5;
+        } else {
+          // Not holding space — gentle sink with heavy drag
+          entity.vy += entity.gravity * 0.15;
+          entity.vy = Math.min(entity.vy, 1.2);
+        }
+        entity.vx *= 0.82; // water drag on horizontal
+      }
+    }
+
+    // ── Horizontal movement ─────────────────────────────────────────────────
     entity.x += entity.vx;
 
-    let checkYPoints = [
+    const checkYPoints = [
       entity.y,
       entity.y + entity.height / 2,
       entity.y + entity.height - 1,
     ];
 
     if (entity.vx > 0) {
-      let rightX = entity.x + entity.width;
-      if (checkYPoints.some((y) => world.isTileSolidAt(rightX, y))) {
+      const rightX = entity.x + entity.width;
+      if (
+        checkYPoints.some((y) => world.isTileSolidAt(rightX, y, false, theme))
+      ) {
         entity.x = Math.floor(rightX / tileSize) * tileSize - entity.width;
         entity.vx = 0;
       }
     } else if (entity.vx < 0) {
-      let leftX = entity.x;
-      if (checkYPoints.some((y) => world.isTileSolidAt(leftX, y))) {
+      const leftX = entity.x;
+      if (
+        checkYPoints.some((y) => world.isTileSolidAt(leftX, y, false, theme))
+      ) {
         entity.x = (Math.floor(leftX / tileSize) + 1) * tileSize;
         entity.vx = 0;
       }
     }
 
-    let previousY = entity.y;
+    // ── Vertical movement ───────────────────────────────────────────────────
+    // For non-player entities gravity is always applied here
+    if (!isPlayer) {
+      entity.vy += entity.gravity;
+    }
+
+    const previousY = entity.y;
     entity.y += entity.vy;
     entity.isGrounded = false;
 
-    let checkXPoints = [
+    const checkXPoints = [
       entity.x + 4,
       entity.x + entity.width / 2,
       entity.x + entity.width - 4,
     ];
 
     if (entity.vy > 0) {
-      let feetY = entity.y + entity.height;
-      let hitSolidGround = false;
+      const feetY = entity.y + entity.height;
+      let hitGround = false;
 
-      for (let x of checkXPoints) {
-        if (world.isTileSolidAt(x, feetY, true)) {
-          let isLeaf = world.getTileTypeAt?.(x, feetY) === "leaves";
+      for (const x of checkXPoints) {
+        if (world.isTileSolidAt(x, feetY, true, theme)) {
+          const isLeaf = world.getTileTypeAt(x, feetY) === "leaves";
           if (isLeaf) {
             if (
               previousY + entity.height <=
               Math.floor(feetY / tileSize) * tileSize
             ) {
-              hitSolidGround = true;
+              hitGround = true;
               break;
             }
           } else {
-            hitSolidGround = true;
+            hitGround = true;
             break;
           }
         }
       }
 
-      if (hitSolidGround) {
+      if (hitGround) {
         entity.y = Math.floor(feetY / tileSize) * tileSize - entity.height;
         entity.vy = 0;
         entity.isGrounded = true;
+        // If player was frozen and is now on solid ground above water, unfreeze
+        if (isPlayer) entity.isFrozen = false;
       }
     } else if (entity.vy < 0) {
-      let headY = entity.y;
-      if (checkXPoints.some((x) => world.isTileSolidAt(x, headY))) {
+      const headY = entity.y;
+      if (
+        checkXPoints.some((x) => world.isTileSolidAt(x, headY, false, theme))
+      ) {
         entity.y = (Math.floor(headY / tileSize) + 1) * tileSize;
         entity.vy = 0;
       }
