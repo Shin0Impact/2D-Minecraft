@@ -10,14 +10,12 @@ class MiningSystem {
       if (counterElement) {
         const count = engine.inventory[item];
         counterElement.textContent = count;
-
         const buttonSlot = counterElement.closest(".tool-btn");
         if (buttonSlot) {
           if (count > 0) {
             buttonSlot.style.display = "flex";
           } else {
             buttonSlot.style.display = "none";
-
             if (engine.currentTool === `place-${item}`) {
               buttonSlot.classList.remove("active");
               engine.currentTool = "sword";
@@ -30,6 +28,16 @@ class MiningSystem {
     }
   }
 
+  _canBreak(tool, tileType) {
+    const byPickaxe = ["stone", "coal", "iron", "gold", "diamond", "water", "snow"];
+    const byShovel  = ["grass", "dirt", "sand"];
+    const byAxe     = ["wood", "leaves"];
+    if (tool === "axe")     return byAxe.includes(tileType);
+    if (tool === "pickaxe") return byPickaxe.includes(tileType);
+    if (tool === "shovel")  return byShovel.includes(tileType);
+    return false;
+  }
+
   executeEnvironmentMining(worldX, worldY) {
     const engine = this.engine;
     const world = engine.world;
@@ -39,60 +47,24 @@ class MiningSystem {
     const tileCol = Math.floor(worldX / world.tileSize);
     const tileRow = Math.floor(worldY / world.tileSize);
 
-    if (
-      tileCol < 0 ||
-      tileCol >= world.cols ||
-      tileRow < 0 ||
-      tileRow >= world.rows
-    )
-      return;
+    if (tileCol < 0 || tileCol >= world.cols || tileRow < 0 || tileRow >= world.rows) return;
 
     const tileCenterX = tileCol * world.tileSize + world.tileSize / 2;
     const tileCenterY = tileRow * world.tileSize + world.tileSize / 2;
-
-    const distance = Math.sqrt(
-      Math.pow(tileCenterX - playerCenterX, 2) +
-        Math.pow(tileCenterY - playerCenterY, 2),
-    );
+    const distance = Math.hypot(tileCenterX - playerCenterX, tileCenterY - playerCenterY);
     if (distance > engine.mineRange) return;
 
     const tileType = world.matrix[tileRow][tileCol];
-    let canBreak = false;
+    if (!this._canBreak(engine.currentTool, tileType)) return;
 
-    const breakableByPickaxe = [
-      "stone",
-      "coal",
-      "iron",
-      "gold",
-      "diamond",
-      "water",
-    ];
-
-    if (
-      engine.currentTool === "axe" &&
-      (tileType === "wood" || tileType === "leaves")
-    ) {
-      canBreak = true;
-    } else if (
-      engine.currentTool === "pickaxe" &&
-      breakableByPickaxe.includes(tileType)
-    ) {
-      canBreak = true;
-    } else if (
-      engine.currentTool === "shovel" &&
-      (tileType === "grass" || tileType === "dirt")
-    ) {
-      canBreak = true;
+    if (engine.inventory[tileType] !== undefined) {
+      engine.inventory[tileType]++;
+      this.updateInventoryUI();
     }
 
-    if (canBreak) {
-      if (engine.inventory[tileType] !== undefined) {
-        engine.inventory[tileType]++;
-        this.updateInventoryUI();
-      }
-      world.matrix[tileRow][tileCol] = "air";
-      world.render();
-    }
+    world.animateTile(tileRow, tileCol, "tile-break");
+    world.matrix[tileRow][tileCol] = "air";
+    world.render();
   }
 
   executeBlockPlacement(worldX, worldY) {
@@ -104,22 +76,12 @@ class MiningSystem {
     const tileCol = Math.floor(worldX / world.tileSize);
     const tileRow = Math.floor(worldY / world.tileSize);
 
-    if (
-      tileCol < 0 ||
-      tileCol >= world.cols ||
-      tileRow < 0 ||
-      tileRow >= world.rows
-    )
-      return;
+    if (tileCol < 0 || tileCol >= world.cols || tileRow < 0 || tileRow >= world.rows) return;
     if (world.matrix[tileRow][tileCol] !== "air") return;
 
     const tileCenterX = tileCol * world.tileSize + world.tileSize / 2;
     const tileCenterY = tileRow * world.tileSize + world.tileSize / 2;
-
-    const distance = Math.sqrt(
-      Math.pow(tileCenterX - playerCenterX, 2) +
-        Math.pow(tileCenterY - playerCenterY, 2),
-    );
+    const distance = Math.hypot(tileCenterX - playerCenterX, tileCenterY - playerCenterY);
     if (distance > engine.mineRange) return;
 
     const blockBox = {
@@ -131,13 +93,12 @@ class MiningSystem {
     if (engine.physics.checkCollision(engine.player, blockBox)) return;
 
     const blockType = engine.currentTool.replace("place-", "");
-
     if (engine.inventory[blockType] > 0) {
       engine.inventory[blockType]--;
       this.updateInventoryUI();
-
       world.matrix[tileRow][tileCol] = blockType;
       world.render();
+      world.animateTile(tileRow, tileCol, "tile-place");
     }
   }
 }

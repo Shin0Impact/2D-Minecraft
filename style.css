@@ -1,4 +1,36 @@
-/* Core page layout centering elements */
+/* ═══════════════════════════════════════════════════
+   THEME SYSTEM — all tile colours route through vars
+   body[data-theme="forest|desert|cave"]
+════════════════════════════════════════════════════ */
+
+body[data-theme="forest"] {
+  --sky-color: #74b9ff;
+  --grass-img: url("Assets/Grass.png");
+  --dirt-img:  url("Assets/Dirt.png");
+  --stone-img: url("Assets/Stone.png");
+  --sky-bg:    #74b9ff;
+}
+
+body[data-theme="desert"] {
+  --sky-color: #f9ca24;
+  --grass-img: url("Assets/Sand.png");    /* sand surface */
+  --dirt-img:  url("Assets/Sand.png");
+  --stone-img: url("Assets/Stone.png");
+  --sky-bg:    #f9ca24;
+}
+
+body[data-theme="cave"] {
+  --sky-color: #1e272e;
+  --grass-img: url("Assets/Snow.png");
+  --dirt-img:  url("Assets/Dirt.png");
+  --stone-img: url("Assets/Stone.png");
+  --sky-bg:    #1e272e;
+}
+
+/* ═══════════════════════════════════════════════════
+   CORE LAYOUT
+════════════════════════════════════════════════════ */
+
 body {
   background-color: #2f3640;
   margin: 0;
@@ -17,18 +49,20 @@ body {
   gap: 15px;
 }
 
-/* MANDATORY REQUIREMENT: Game Window increased by 30% from 800x600 -> 1040x780 */
 #gameWindow {
   position: relative;
   width: 1040px;
   height: 780px;
-  background-color: #74b9ff;
+  background-color: var(--sky-color, #74b9ff);
   border: 6px solid #1e272e;
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
   overflow: hidden;
 }
 
-/* Individual tile blocks */
+/* ═══════════════════════════════════════════════════
+   TILES
+════════════════════════════════════════════════════ */
+
 .tile {
   width: 45px;
   height: 45px;
@@ -38,47 +72,67 @@ body {
   image-rendering: pixelated;
 }
 
-/* Texture asset connections */
-.air {
-  background-color: #74b9ff;
+/* Tile hover states */
+.tile-hover {
+  outline: 2px solid rgba(255, 255, 255, 0.6);
+  outline-offset: -2px;
+  z-index: 1;
+  position: relative;
 }
-.grass {
-  background-image: url("Assets/Grass.png");
+.tile-hover-valid {
+  outline-color: rgba(80, 255, 80, 0.85);
+  filter: brightness(1.25);
 }
-.dirt {
-  background-image: url("Assets/Dirt.png");
-}
-.stone {
-  background-image: url("Assets/Stone.png");
-}
-.wood {
-  background-image: url("Assets/Wood.png");
-}
-.leaves {
-  background-image: url("Assets/Leaves.png");
-}
-.coal {
-  background-image: url("Assets/Coal.png");
-  background-color: #353b48;
-}
-.iron {
-  background-image: url("Assets/Iron.png");
-  background-color: #dcdde1;
-}
-.gold {
-  background-image: url("Assets/Gold.png");
-  background-color: #fbc531;
-}
-.diamond {
-  background-image: url("Assets/Diamond.png");
-  background-color: #00cec9;
-}
-.water {
-  background-image: url("Assets/Water.png");
-  background-color: #0984e3;
+.tile-hover-invalid {
+  outline-color: rgba(255, 60, 60, 0.85);
+  filter: brightness(0.85) sepia(0.3);
 }
 
-/* The Player Sprite */
+/* ─── Tile break animation ───────────────────────── */
+@keyframes tileBreak {
+  0%   { transform: scale(1);    opacity: 1; filter: brightness(1); }
+  40%  { transform: scale(1.15); opacity: 0.9; filter: brightness(2); }
+  100% { transform: scale(0);    opacity: 0; }
+}
+
+@keyframes tilePlace {
+  0%   { transform: scale(0.5); opacity: 0.4; }
+  70%  { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+.tile-break {
+  animation: tileBreak 0.18s ease-out forwards;
+  pointer-events: none;
+}
+
+.tile-place {
+  animation: tilePlace 0.15s ease-out forwards;
+}
+
+/* ─── Tile textures ──────────────────────────────── */
+.air      { background-color: var(--sky-color, #74b9ff); }
+.grass    { background-image: url("Assets/Grass.png"); }
+.dirt     { background-image: url("Assets/Dirt.png"); }
+.stone    { background-image: url("Assets/Stone.png"); }
+.wood     { background-image: url("Assets/Wood.png"); }
+.leaves   { background-image: url("Assets/Leaves.png"); }
+.sand     { background-image: url("Assets/Sand.png"); background-color: #f0c060; }
+.snow     { background-image: url("Assets/Snow.png"); background-color: #dfe6e9; }
+.coal     { background-image: url("Assets/Coal.png");    background-color: #353b48; }
+.iron     { background-image: url("Assets/Iron.png");    background-color: #dcdde1; }
+.gold     { background-image: url("Assets/Gold.png");    background-color: #fbc531; }
+.diamond  { background-image: url("Assets/Diamond.png"); background-color: #00cec9; }
+.water    { background-image: url("Assets/Water.png");   background-color: #0984e3; }
+
+/* Desert theme overrides — sky + air tile colour */
+body[data-theme="desert"] .air   { background-color: #f9ca24; }
+body[data-theme="cave"]   .air   { background-color: #1e272e; }
+
+/* ═══════════════════════════════════════════════════
+   PLAYER & ENEMIES
+════════════════════════════════════════════════════ */
+
 #playerSprite {
   position: absolute;
   width: 30px;
@@ -103,11 +157,12 @@ body {
   image-rendering: pixelated;
 }
 
-.enemy.zombie {
-  background-image: url("Assets/Zombie.png");
-}
+.enemy.zombie { background-image: url("Assets/Zombie.png"); }
 
-/* Hearts display overlay absolute position (Bottom Left) */
+/* ═══════════════════════════════════════════════════
+   HEARTS UI
+════════════════════════════════════════════════════ */
+
 #heartUI {
   position: absolute;
   bottom: 20px;
@@ -125,15 +180,13 @@ body {
   background-repeat: no-repeat;
   image-rendering: pixelated;
 }
+.heart.full  { background-image: url("Assets/Heart_Full.png"); }
+.heart.empty { background-image: url("Assets/Heart_Empty.png"); }
 
-.heart.full {
-  background-image: url("Assets/Heart_Full.png");
-}
-.heart.empty {
-  background-image: url("Assets/Heart_Empty.png");
-}
+/* ═══════════════════════════════════════════════════
+   RESET BUTTON (top right)
+════════════════════════════════════════════════════ */
 
-/* MODIFIED NEW POSITIONING STYLE FOR THE TOP RIGHT RESET BUTTON */
 .top-reset-btn {
   position: absolute;
   top: 20px;
@@ -144,36 +197,27 @@ body {
   border: 3px solid #373737;
   border-top-color: #8b8b8b;
   border-left-color: #8b8b8b;
-  box-shadow:
-    inset -2px -2px 0px rgba(0, 0, 0, 0.4),
-    2px 2px 10px rgba(0, 0, 0, 0.3);
+  box-shadow: inset -2px -2px 0px rgba(0,0,0,0.4), 2px 2px 10px rgba(0,0,0,0.3);
   padding: 10px 16px;
   font-family: inherit;
   font-weight: bold;
   font-size: 15px;
   cursor: pointer;
 }
+.top-reset-btn:hover  { background-color: rgba(160,160,160,0.95); border-color: #fff; }
+.top-reset-btn:active { border: 3px solid #1a1a1a; box-shadow: inset 2px 2px 0px rgba(0,0,0,0.6); }
 
-.top-reset-btn:hover {
-  background-color: rgba(160, 160, 160, 0.95);
-  border-color: #fff;
-}
+/* ═══════════════════════════════════════════════════
+   HOTBAR
+════════════════════════════════════════════════════ */
 
-.top-reset-btn:active {
-  border: 3px solid #1a1a1a;
-  box-shadow: inset 2px 2px 0px rgba(0, 0, 0, 0.6);
-}
-
-/* --- MINECRAFT HOTBAR INTERFACE SYSTEM --- */
 #toolBelt {
   display: flex;
   background-color: rgba(142, 142, 142, 0.85);
   border: 4px solid #4a4a4a;
   padding: 4px;
   gap: 4px;
-  box-shadow:
-    inset -2px -2px 0px #2c2c2c,
-    inset 2px 2px 0px #ffffff;
+  box-shadow: inset -2px -2px 0px #2c2c2c, inset 2px 2px 0px #ffffff;
   align-items: center;
 }
 
@@ -181,11 +225,11 @@ body {
   position: relative;
   width: 50px;
   height: 50px;
-  background-color: rgba(139, 139, 139, 0.5);
+  background-color: rgba(139,139,139,0.5);
   border: 2px solid #373737;
   border-top-color: #8b8b8b;
   border-left-color: #8b8b8b;
-  box-shadow: inset -2px -2px 0px rgba(0, 0, 0, 0.2);
+  box-shadow: inset -2px -2px 0px rgba(0,0,0,0.2);
   cursor: pointer;
   display: flex;
   justify-content: center;
@@ -198,51 +242,32 @@ body {
 .tool-btn.active {
   border: 4px solid #ffffff;
   box-shadow: inset 0px 0px 4px #000000;
-  background-color: rgba(254, 254, 254, 0.25);
+  background-color: rgba(254,254,254,0.25);
   z-index: 2;
   width: 50px;
   height: 50px;
   box-sizing: border-box;
 }
 
-/* Small pixel preview blocks inside hotbar slot */
 .block-preview {
   display: block;
   width: 26px;
   height: 26px;
   background-size: cover;
   image-rendering: pixelated;
-  border: 1px solid rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(0,0,0,0.15);
 }
 
-.grass-preview {
-  background-image: url("Assets/Grass.png");
-}
-.dirt-preview {
-  background-image: url("Assets/Dirt.png");
-}
-.stone-preview {
-  background-image: url("Assets/Stone.png");
-}
-.wood-preview {
-  background-image: url("Assets/Wood.png");
-}
-.coal-preview {
-  background-image: url("Assets/Coal.png");
-  background-color: #353b48;
-}
-.iron-preview {
-  background-image: url("Assets/Iron.png");
-  background-color: #dcdde1;
-}
-.gold-preview {
-  background-image: url("Assets/Gold.png");
-  background-color: #fbc531;
-}
-.diamond-preview {
-  background-image: url("Assets/Diamond.png");
-  background-color: #00cec9;
-}
+.grass-preview   { background-image: url("Assets/Grass.png"); }
+.dirt-preview    { background-image: url("Assets/Dirt.png"); }
+.stone-preview   { background-image: url("Assets/Stone.png"); }
+.wood-preview    { background-image: url("Assets/Wood.png"); }
+.coal-preview    { background-image: url("Assets/Coal.png");    background-color: #353b48; }
+.iron-preview    { background-image: url("Assets/Iron.png");    background-color: #dcdde1; }
+.gold-preview    { background-image: url("Assets/Gold.png");    background-color: #fbc531; }
+.diamond-preview { background-image: url("Assets/Diamond.png"); background-color: #00cec9; }
+.sand-preview    { background-image: url("Assets/Sand.png");    background-color: #f0c060; }
+.snow-preview    { background-image: url("Assets/Snow.png");    background-color: #dfe6e9; }
 
 .item-count {
   position: absolute;
@@ -255,11 +280,13 @@ body {
   pointer-events: none;
 }
 
-/* --- OVERLAY SCREENS SYSTEM (LANDING & GAME OVER) --- */
+/* ═══════════════════════════════════════════════════
+   OVERLAY SCREENS (landing + game over)
+════════════════════════════════════════════════════ */
+
 .overlay-screen {
   position: fixed;
-  top: 0;
-  left: 0;
+  top: 0; left: 0;
   width: 100vw;
   height: 100vh;
   z-index: 2000;
@@ -267,32 +294,29 @@ body {
   justify-content: center;
   align-items: center;
   backdrop-filter: blur(10px);
-  background-color: rgba(0, 0, 0, 0.65);
+  background-color: rgba(0,0,0,0.65);
   transition: opacity 0.3s ease;
 }
 
 #gameOverScreen {
-  background-color: rgba(139, 0, 0, 0.45);
+  background-color: rgba(139,0,0,0.45);
   backdrop-filter: blur(6px);
 }
 
-.hidden {
-  opacity: 0;
-  pointer-events: none;
-}
+.hidden { opacity: 0; pointer-events: none; }
 
 .menu-card {
   background-color: #2c3e50;
   border: 4px solid #1a252f;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.6);
   padding: 30px;
   text-align: center;
-  max-width: 500px;
+  max-width: 540px;
   color: #ecf0f1;
 }
 
 .game-over-card {
-  background-color: rgba(30, 0, 0, 0.9);
+  background-color: rgba(30,0,0,0.9);
   border-color: #ff0000;
 }
 
@@ -316,21 +340,44 @@ body {
   border: 2px solid #1a252f;
   padding: 15px;
   text-align: left;
-  margin-bottom: 25px;
+  margin-bottom: 20px;
+}
+.tutorial-box h3 { margin-top: 0; color: #f1c40f; }
+.tutorial-box ul { padding-left: 20px; margin-bottom: 0; }
+.tutorial-box li { margin-bottom: 8px; }
+
+/* ─── Picker rows (theme + world type) ──────────── */
+.picker-row {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 16px;
 }
 
-.tutorial-box h3 {
-  margin-top: 0;
-  color: #f1c40f;
+.picker-label {
+  font-size: 12px;
+  color: #95a5a6;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
-.tutorial-box ul {
-  padding-left: 20px;
-  margin-bottom: 0;
+.picker-btn {
+  background-color: #4a6278;
+  color: #ecf0f1;
+  border: 2px solid #2c3e50;
+  padding: 6px 14px;
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.15s;
 }
-
-.tutorial-box li {
-  margin-bottom: 8px;
+.picker-btn:hover  { background-color: #5d7a94; }
+.picker-btn.active {
+  background-color: #2ecc71;
+  color: #1a1a1a;
+  border-color: #27ae60;
+  font-weight: bold;
 }
 
 .mc-btn {
@@ -344,7 +391,4 @@ body {
   cursor: pointer;
   box-shadow: inset -3px -3px 0px #2c3e50;
 }
-
-.mc-btn:hover {
-  background-color: #95a5a6;
-}
+.mc-btn:hover { background-color: #95a5a6; }
