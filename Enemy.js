@@ -6,18 +6,20 @@ class Enemy {
     this.height = 45;
     this.type = type; // "zombie", "skeleton", or "goblin"
     this.grid = gridInstance;
-    this.health = type === "goblin" ? 2 : 3; // Goblins are slightly squishier
+    this.health = type === "goblin" ? 2 : 3;
     this.facing = "left";
     this.knockbackTimer = 0;
     this.isGrounded = false;
 
     // Dynamic stats based on enemy profiles
     if (this.type === "goblin") {
-      this.attackRange = 250; // Long-range sightlines for shooting arrows
-      this.attackRate = 120; // Shoots an arrow once every 2 seconds
-      this.baseSpeed = 0.75; // Goblins are nimble runners
+      this.sightRange = 250; // Sight line to stop and shoot arrows
+      this.attackRange = 25; // FIX: Lower melee range so it doesn't instantly hit you from across the map in tick()
+      this.attackRate = 210; // Shoots an arrow once every 2 seconds
+      this.baseSpeed = 0.75;
     } else {
-      this.attackRange = 25; // Melee reach for skeletons/zombies
+      this.sightRange = 25; // Melee reach for skeletons/zombies
+      this.attackRange = 25;
       this.attackRate = 90;
       this.baseSpeed = 0.5;
     }
@@ -45,6 +47,7 @@ class Enemy {
     this.vy = -4;
     this.knockbackTimer = 8;
   }
+
   // Helper method to spawn arrow projectiles for the Archer Goblin
   fireArrow(playerTarget) {
     const arrow = document.createElement("div");
@@ -67,9 +70,12 @@ class Enemy {
     const avx = (dx / dist) * arrowSpeed;
     const avy = (dy / dist) * arrowSpeed;
 
+    // FIX: Calculate the angle in radians and convert to degrees
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+    arrow.style.transform = `rotate(${angle}deg)`;
+
     // Micro projectile loop running directly inside the window context
     const arrowInterval = setInterval(() => {
-      // If player screen triggers are up or game is over, freeze arrows
       const screensUp =
         !document.getElementById("landingPage").classList.contains("hidden") ||
         !document.getElementById("gameOverScreen").classList.contains("hidden");
@@ -100,10 +106,9 @@ class Enemy {
         clearInterval(arrowInterval);
         arrow.remove();
 
-        // FIX: Pass 'this' (the Goblin enemy instance itself) instead of the arrow element.
-        // This lets Combat.js process player health reduction and calculate knockback orientation perfectly!
-        if (window.gameInstance && window.gameInstance.combat) {
-          window.gameInstance.combat.takeDamage(this);
+        // Route directly through your explicit global game variable object 'Minecraft2D'
+        if (typeof Minecraft2D !== "undefined" && Minecraft2D.combat) {
+          Minecraft2D.combat.takeDamage(this);
         }
       }
 
@@ -139,9 +144,9 @@ class Enemy {
       const horizontalDistance = Math.abs(enemyCenter - playerCenter);
       const verticalDistance = Math.abs(this.y - playerTarget.y);
 
-      // Check if player is inside the entity's distinct attack range
+      // Check if player is inside the entity's distinct vision sight line
       if (
-        horizontalDistance <= this.attackRange &&
+        horizontalDistance <= this.sightRange &&
         verticalDistance < (this.type === "goblin" ? 200 : this.height)
       ) {
         this.vx = 0;
@@ -170,14 +175,12 @@ class Enemy {
 
         // ─── STATE MACHINE: WATER TRACKING VS LAND RUNNING ───────────────────
         if (this.isInWater && this.type !== "skeleton") {
-          // WATER MODE: Zombie and Goblin swim upwards perfectly to target
           if (this.y > playerTarget.y + 10) {
             this.swimmingUp = true;
           } else {
             this.swimmingUp = false;
           }
         } else {
-          // LAND MODE & SKELETON FLOOR SINK OVERRIDE
           this.swimmingUp = false;
 
           if (this.isGrounded && Math.abs(this.vx) > 0) {
@@ -188,7 +191,7 @@ class Enemy {
               if (this.jumpCooldownTimer === 0) {
                 this.vy = this.jumpForce;
                 this.isGrounded = false;
-                this.jumpCooldownTimer = 120; // 2-second pacing window
+                this.jumpCooldownTimer = 120;
               }
             }
           }
@@ -196,7 +199,6 @@ class Enemy {
       }
     }
 
-    // Apply standard falling physics if out of the water or if a sinking skeleton
     if (!this.isInWater || this.type === "skeleton") {
       this.vy += this.gravity;
     }
@@ -206,14 +208,12 @@ class Enemy {
     this.DOMElement.style.left = `${this.x}px`;
     this.DOMElement.style.top = `${this.y}px`;
 
-    // Visual direction flip
     if (this.facing === "left") {
       this.DOMElement.style.transform = "scaleX(1)";
     } else {
       this.DOMElement.style.transform = "scaleX(-1)";
     }
 
-    // Trigger walk animation classes smoothly if patrolling surfaces
     if (Math.abs(this.vx) > 0.05 && this.isGrounded) {
       this.DOMElement.classList.add("walking");
     } else {

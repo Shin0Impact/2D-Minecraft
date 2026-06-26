@@ -273,9 +273,8 @@ body[data-theme="snow"] .air {
 /* --- Projectile Layout Sizing --- */
 .arrow-projectile {
   position: absolute;
-  width: 8px;
+  width: 16px;
   height: 8px;
-  background-color: #f312ef;
   background-image: url("Assets/Arrow.png");
   background-size: 100% 100%;
   border-radius: 50%;
