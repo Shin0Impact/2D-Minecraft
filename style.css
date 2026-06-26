@@ -191,6 +191,10 @@ body[data-theme="snow"] .air {
   z-index: 10;
 }
 
+#playerSprite.walking {
+  background-image: url("Assets/PlayerWalk.gif");
+}
+
 #playerSprite.damaged {
   filter: sepia(1) saturate(5) hue-rotate(-50deg);
   opacity: 0.7;

@@ -78,6 +78,14 @@ class Player {
     this.DOMElement.style.transform =
       this.facing === "left" ? "scaleX(-1)" : "scaleX(1)";
 
+    // ─── WALKING ANIMATION TRIGGER ───────────────────────────────
+    // If moving left/right and on the ground, apply walking class
+    if (Math.abs(this.vx) > 0.01 && this.isGrounded) {
+      this.DOMElement.classList.add("walking");
+    } else {
+      this.DOMElement.classList.remove("walking");
+    }
+
     // Visual tint when submerged
     if (this.isFrozen) {
       this.DOMElement.classList.add("frozen");
