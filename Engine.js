@@ -78,6 +78,9 @@ class GameEngine {
 
       if (this.currentTool === "sword") {
         this.combat.executePlayerAttack();
+      } else if (this.currentTool === "bow") {
+        // Player Ranged Bow Logic
+        this.firePlayerArrow(worldX, worldY);
       } else if (this.currentTool === "bucket") {
         this.executeBucketAction(worldX, worldY);
       } else if (this.currentTool.startsWith("place-")) {
@@ -111,7 +114,6 @@ class GameEngine {
   }
 
   // ── Theme picker ────────────────────────────────────────────────────────────
-  // Only stores the choice on the landing page — world regenerates on Start/Reset
 
   setupThemePicker() {
     document.querySelectorAll(".theme-btn").forEach((btn) => {
@@ -121,7 +123,6 @@ class GameEngine {
           .forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
         this.currentTheme = btn.dataset.theme;
-        // Preview sky colour only — full world gen on game start
         document.body.dataset.theme = this.currentTheme;
       });
     });
@@ -156,16 +157,13 @@ class GameEngine {
     const tileType = world.matrix[tileRow][tileCol];
 
     if (this.bucketContents === "empty" && tileType === "water") {
-      // Collect water
       world.matrix[tileRow][tileCol] = "air";
       world.render();
       this.bucketContents = "water";
       this.updateBucketUI();
     } else if (this.bucketContents === "water" && tileType === "air") {
-      // Place water — but desert evaporates it immediately
       if (this.currentTheme === "desert") {
         this._showEvaporationEffect(tileCol, tileRow);
-        // bucket stays empty, nothing placed
       } else {
         world.matrix[tileRow][tileCol] = "water";
         world.render();
@@ -177,7 +175,6 @@ class GameEngine {
   }
 
   _showEvaporationEffect(col, row) {
-    // Briefly flash a "steam" tile then remove it
     const tileEl = this.world.DOMElement.querySelector(
       `[data-row="${row}"][data-col="${col}"]`,
     );
@@ -198,13 +195,93 @@ class GameEngine {
     btn.title = full ? "Bucket (Full)" : "Bucket (Empty)";
   }
 
-  // ── Zombie spawning ─────────────────────────────────────────────────────────
+  // ── Player Arrow firing logic ────────────────────────────────────────────────
+
+  firePlayerArrow(targetX, targetY) {
+    const arrow = document.createElement("div");
+    arrow.className = "player-arrow-projectile";
+
+    let arrowX = this.player.x + this.player.width / 2;
+    let arrowY = this.player.y + this.player.height / 3;
+    arrow.style.left = `${arrowX}px`;
+    arrow.style.top = `${arrowY}px`;
+
+    this.stageElement.appendChild(arrow);
+
+    const dx = targetX - arrowX;
+    const dy = targetY - arrowY;
+    const dist = Math.hypot(dx, dy);
+
+    const arrowSpeed = 8;
+    const avx = (dx / dist) * arrowSpeed;
+    const avy = (dy / dist) * arrowSpeed;
+
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+    arrow.style.transform = `rotate(${angle}deg)`;
+
+    const arrowInterval = setInterval(() => {
+      const screensUp =
+        !document.getElementById("landingPage").classList.contains("hidden") ||
+        !document.getElementById("gameOverScreen").classList.contains("hidden");
+      if (screensUp) return;
+
+      arrowX += avx;
+      arrowY += avy;
+      arrow.style.left = `${arrowX}px`;
+      arrow.style.top = `${arrowY}px`;
+
+      for (let i = this.enemies.length - 1; i >= 0; i--) {
+        const enemy = this.enemies[i];
+
+        const enemyHitbox = {
+          x: enemy.x,
+          y: enemy.y,
+          width: enemy.width,
+          height: enemy.height,
+        };
+        const arrowHitbox = { x: arrowX, y: arrowY, width: 8, height: 8 };
+
+        const hitEnemy =
+          arrowHitbox.x < enemyHitbox.x + enemyHitbox.width &&
+          arrowHitbox.x + arrowHitbox.width > enemyHitbox.x &&
+          arrowHitbox.y < enemyHitbox.y + enemyHitbox.height &&
+          arrowHitbox.y + arrowHitbox.height > enemyHitbox.y;
+
+        if (hitEnemy) {
+          clearInterval(arrowInterval);
+          arrow.remove();
+
+          const damageDirection = avx > 0 ? 1 : -1;
+          enemy.applyKnockback(damageDirection);
+          enemy.health -= 1;
+
+          if (enemy.health <= 0) {
+            enemy.DOMElement.remove();
+            this.enemies.splice(i, 1);
+          }
+          return;
+        }
+      }
+
+      if (this.world.isTileSolidAt(arrowX, arrowY)) {
+        clearInterval(arrowInterval);
+        arrow.remove();
+      }
+    }, 1000 / 60);
+
+    setTimeout(() => {
+      clearInterval(arrowInterval);
+      if (arrow.parentNode) arrow.remove();
+    }, 4000);
+  }
+
+  // ── Enemy Spawning Setup ─────────────────────────────────────────────────────
 
   spawnZombies() {
     this.enemies.forEach((e) => e.DOMElement.remove());
     this.enemies = [];
 
-    // 1. Zombie - Original Spawning Column (Col 12)
+    // 1. Zombie (Col 12)
     const zombieCol = 12;
     const zombieRow = this.world.getSurfaceRow(zombieCol);
     this.enemies.push(
@@ -216,7 +293,7 @@ class GameEngine {
       ),
     );
 
-    // 2. Archer Goblin - Spawned slightly further right (Col 16)
+    // 2. Archer Goblin (Col 16)
     const goblinCol = 16;
     const goblinRow = this.world.getSurfaceRow(goblinCol);
     this.enemies.push(
@@ -228,7 +305,7 @@ class GameEngine {
       ),
     );
 
-    // 3. Skeleton - Spawned further out to the right (Col 20)
+    // 3. Skeleton (Col 20)
     const skeletonCol = 20;
     const skeletonRow = this.world.getSurfaceRow(skeletonCol);
     this.enemies.push(
@@ -311,7 +388,7 @@ class GameEngine {
     const tileRow = Math.floor(worldY / this.world.tileSize);
 
     this.clearTileHover();
-    if (this.currentTool === "sword") return;
+    if (this.currentTool === "sword" || this.currentTool === "bow") return;
     if (
       tileCol < 0 ||
       tileCol >= this.world.cols ||

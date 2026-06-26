@@ -14,8 +14,8 @@ class Enemy {
     // Dynamic stats based on enemy profiles
     if (this.type === "goblin") {
       this.sightRange = 250; // Sight line to stop and shoot arrows
-      this.attackRange = 25; // FIX: Lower melee range so it doesn't instantly hit you from across the map in tick()
-      this.attackRate = 210; // Shoots an arrow once every 2 seconds
+      this.attackRange = 25; // Lower melee range so it doesn't instantly hit you via tick()
+      this.attackRate = 210; // Slowed fire rate (~3.5 seconds at 60fps)
       this.baseSpeed = 0.75;
     } else {
       this.sightRange = 25; // Melee reach for skeletons/zombies
@@ -70,7 +70,7 @@ class Enemy {
     const avx = (dx / dist) * arrowSpeed;
     const avy = (dy / dist) * arrowSpeed;
 
-    // FIX: Calculate the angle in radians and convert to degrees
+    // Calculate the angle in radians and convert to degrees to stop reverse flying bugs
     const angle = Math.atan2(dy, dx) * (180 / Math.PI);
     arrow.style.transform = `rotate(${angle}deg)`;
 
@@ -106,7 +106,7 @@ class Enemy {
         clearInterval(arrowInterval);
         arrow.remove();
 
-        // Route directly through your explicit global game variable object 'Minecraft2D'
+        // Route directly through the explicit global variable object 'Minecraft2D'
         if (typeof Minecraft2D !== "undefined" && Minecraft2D.combat) {
           Minecraft2D.combat.takeDamage(this);
         }

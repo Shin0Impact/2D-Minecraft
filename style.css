@@ -210,6 +210,18 @@ body[data-theme="snow"] .air {
   opacity: 0.9;
 }
 
+.player-arrow-projectile {
+  position: absolute;
+  width: 16px;
+  height: 6px;
+  background-image: url("Assets/Arrow.png"); /* Reuses your exact same arrow file asset */
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  z-index: 999;
+  pointer-events: none;
+}
+
 /* Evaporation effect for water placed in desert */
 @keyframes tileEvaporate {
   0% {
