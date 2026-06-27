@@ -59,6 +59,10 @@ class GameEngine {
     );
 
     this.spawnZombies();
+
+    // Start our dynamic off-screen spawning generator loop
+    this._startOffScreenSpawner();
+
     this.combat.renderHearts();
     this.setupToolBelt();
     this.mining.updateInventoryUI();
@@ -70,6 +74,39 @@ class GameEngine {
     window.addEventListener("keyup", (e) => (this.keysPressed[e.key] = false));
 
     const gameWindow = document.getElementById("gameWindow");
+
+    window.addEventListener("keydown", (e) => {
+      // Create a dictionary mapping keys to your exact dataset tool names
+      const toolMapping = {
+        1: "sword",
+        2: "bow",
+        3: "axe",
+        4: "pickaxe",
+        5: "shovel",
+        6: "bucket",
+        // If you have building tools (e.g. "place-dirt"), you can map them here too! (e.g., "7": "place-dirt")
+      };
+
+      // Check if the pressed key is one of our mapped numbers
+      if (toolMapping[e.key]) {
+        const targetTool = toolMapping[e.key];
+
+        // 1. Update the engine's active tool state
+        this.currentTool = targetTool;
+
+        // 2. Clear out the visual ".active" styling from all toolbelt buttons
+        const buttons = document.querySelectorAll(".tool-btn");
+        buttons.forEach((btn) => btn.classList.remove("active"));
+
+        // 3. Find the specific button element matching this tool and highlight it
+        const targetButton = document.querySelector(
+          `[data-tool="${targetTool}"]`,
+        );
+        if (targetButton) {
+          targetButton.classList.add("active");
+        }
+      }
+    });
 
     gameWindow.addEventListener("mousedown", (e) => {
       const rect = gameWindow.getBoundingClientRect();
@@ -278,44 +315,90 @@ class GameEngine {
   // ── Enemy Spawning Setup ─────────────────────────────────────────────────────
 
   spawnZombies() {
-    this.enemies.forEach((e) => e.DOMElement.remove());
+    this.enemies.forEach((e) => {
+      if (e.DOMElement) e.DOMElement.remove();
+    });
     this.enemies = [];
 
-    // 1. Zombie (Col 12)
+    // ONLY ONE SINGLE STARTING ZOMBIE (Col 12)
     const zombieCol = 12;
     const zombieRow = this.world.getSurfaceRow(zombieCol);
-    this.enemies.push(
-      new Enemy(
-        zombieCol * this.world.tileSize,
-        zombieRow * this.world.tileSize - 45,
-        "zombie",
-        this.world,
-      ),
+    const firstZombie = new Enemy(
+      zombieCol * this.world.tileSize,
+      zombieRow * this.world.tileSize - 45,
+      "zombie",
+      this.world,
     );
 
-    // 2. Archer Goblin (Col 16)
-    const goblinCol = 16;
-    const goblinRow = this.world.getSurfaceRow(goblinCol);
-    this.enemies.push(
-      new Enemy(
-        goblinCol * this.world.tileSize,
-        goblinRow * this.world.tileSize - 45,
-        "goblin",
-        this.world,
-      ),
-    );
+    const spawnZ = document.createElement("div");
+    spawnZ.className = `enemy ${firstZombie.type}`;
+    this.stageElement.appendChild(spawnZ);
+    firstZombie.DOMElement = spawnZ;
 
-    // 3. Skeleton (Col 20)
-    const skeletonCol = 20;
-    const skeletonRow = this.world.getSurfaceRow(skeletonCol);
-    this.enemies.push(
-      new Enemy(
-        skeletonCol * this.world.tileSize,
-        skeletonRow * this.world.tileSize - 45,
-        "skeleton",
-        this.world,
-      ),
-    );
+    this.enemies.push(firstZombie);
+  }
+
+  // ── Procedural Off-Screen Spawner Engine ─────────────────────────────────────
+
+  _startOffScreenSpawner() {
+    setInterval(() => {
+      // LIMIT ACTIVE SPAWNS TO A MAXIMUM OF 3 EXTRA ENEMIES AT ANY GIVEN TIME
+      if (this.enemies.length >= 3) return;
+
+      const world = this.world;
+      const cameraLeft = this.cameraX;
+      const cameraRight = this.cameraX + this.camera.viewWidth;
+      const cameraTop = this.cameraY;
+      const cameraBottom = this.cameraY + this.camera.viewHeight;
+
+      let validSpawnLocations = [];
+
+      for (let r = 0; r < world.rows - 1; r++) {
+        for (let c = 0; c < world.cols; c++) {
+          const currentTile = world.matrix[r][c];
+          const tileBelow = world.matrix[r + 1][c];
+
+          if (currentTile === "air") {
+            const isSolidGround = !["air", "leaves", "wood", "water"].includes(
+              tileBelow,
+            );
+
+            if (isSolidGround) {
+              const pixelX = c * world.tileSize;
+              const pixelY = r * world.tileSize - 5;
+
+              const isOffScreen =
+                pixelX < cameraLeft ||
+                pixelX > cameraRight ||
+                pixelY < cameraTop ||
+                pixelY > cameraBottom;
+
+              if (isOffScreen) {
+                validSpawnLocations.push({ x: pixelX, y: pixelY });
+              }
+            }
+          }
+        }
+      }
+
+      if (validSpawnLocations.length > 0) {
+        const choice =
+          validSpawnLocations[
+            Math.floor(Math.random() * validSpawnLocations.length)
+          ];
+        const types = ["zombie", "skeleton", "goblin"];
+        const selectedType = types[Math.floor(Math.random() * types.length)];
+
+        const newEnemy = new Enemy(choice.x, choice.y, selectedType, world);
+
+        const enemyEl = document.createElement("div");
+        enemyEl.className = `enemy ${newEnemy.type}`;
+        this.stageElement.appendChild(enemyEl);
+        newEnemy.DOMElement = enemyEl;
+
+        this.enemies.push(newEnemy);
+      }
+    }, 5000);
   }
 
   // ── World reset ─────────────────────────────────────────────────────────────

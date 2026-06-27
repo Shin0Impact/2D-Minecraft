@@ -53,9 +53,17 @@ class WorldGrid {
 
     for (let c = 0; c < this.cols; c++) {
       const f = this._floorProfile[c];
-      this.matrix[f][c] = surface;
-      for (let r = f + 1; r < this.rows; r++) {
-        this.matrix[r][c] = r < f + 5 ? sub : "stone";
+
+      // Generate column downwards
+      for (let r = f; r < this.rows; r++) {
+        if (r === this.rows - 1) {
+          // Absolute bottom row is filled with unbreakable bedrock
+          this.matrix[r][c] = "bedrock";
+        } else if (r === f) {
+          this.matrix[r][c] = surface;
+        } else {
+          this.matrix[r][c] = r < f + 5 ? sub : "stone";
+        }
       }
     }
   }

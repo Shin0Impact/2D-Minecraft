@@ -26,6 +26,26 @@ class PhysicsSystem {
     const tileSize = world.tileSize;
     const isPlayer = entity === this.engine.player;
 
+    // ─── OUT OF BOUNDS VOID KILL ZONE ─────────────────────────────────────────
+    const mapBottomPixelHeight = world.rows * world.tileSize;
+    if (entity.y > mapBottomPixelHeight + 100) {
+      if (isPlayer) {
+        // Instantly kill player and bring up Game Over overlay
+        this.engine.playerHealth = 0;
+        this.engine.combat.renderHearts();
+        document.getElementById("gameOverScreen").classList.remove("hidden");
+        entity.vx = 0;
+        entity.vy = 0;
+        return;
+      } else {
+        // Remove entities/enemies gracefully if they fall out of bounds
+        if (entity.DOMElement) entity.DOMElement.remove();
+        const idx = this.engine.enemies.indexOf(entity);
+        if (idx !== -1) this.engine.enemies.splice(idx, 1);
+        return;
+      }
+    }
+
     // ── Water state detection ───────────────────────────────────────────────
     const inWater = this._isEntityInWater(entity);
 

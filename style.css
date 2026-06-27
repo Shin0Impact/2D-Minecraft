@@ -168,6 +168,12 @@ body {
   background-image: url("Assets/Water.png");
   background-color: #0984e3;
 }
+.bedrock {
+  background-color: #1c1024;
+  border: 1px solid #110917;
+  background-image: url("Assets/bedrock.png");
+  box-shadow: inset 0 0 4px rgba(74, 39, 102, 0.6);
+}
 
 /* Per-theme air tile colour — matches the sky variable */
 body[data-theme="desert"] .air {
