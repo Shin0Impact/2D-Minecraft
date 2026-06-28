@@ -1,3 +1,5 @@
+// Player.js — reads keyboard input, updates velocity, tracks state flags
+
 class Player {
   constructor(startX, startY, gridInstance) {
     this.x = startX;
@@ -10,15 +12,16 @@ class Player {
     this.gravity = 0.5;
     this.jumpForce = -10;
     this.isGrounded = false;
-    this.isInWater = false; // set each tick by PhysicsSystem
-    this.isFrozen = false; // set by engine based on snow theme + water tile
-    this.swimmingUp = false; // true when space held while in water
+    this.isInWater = false; // set by PhysicsSystem each tick
+    this.isFrozen = false; // true when standing in frozen water (snow world)
+    this.swimmingUp = false; // true while space is held in water
     this.grid = gridInstance;
     this.knockbackTimer = 0;
     this.facing = "right";
     this.DOMElement = document.getElementById("playerSprite");
   }
 
+  // Launches the player backward — called by CombatSystem on hit
   applyKnockback(directionX) {
     this.vx = directionX * 8;
     this.vy = -6;
@@ -27,12 +30,13 @@ class Player {
   }
 
   update(keysPressed, theme) {
-    // Frozen in snow water — no movement at all
+    // Frozen solid — no control at all
     if (this.isFrozen) {
       this.vx = 0;
       return;
     }
 
+    // Knockback overrides normal movement for a few frames, then fades
     if (this.knockbackTimer > 0) {
       this.knockbackTimer--;
       this.vx *= 0.92;
@@ -49,12 +53,11 @@ class Player {
     }
 
     if (this.isInWater && theme === "forest") {
-      // Physics handles gravity suppression and upward velocity.
-      // We just track whether the player wants to swim up.
+      // PhysicsSystem handles the actual upward velocity; we just signal intent here
       this.swimmingUp = !!(keysPressed[" "] || keysPressed["w"]);
     } else {
       this.swimmingUp = false;
-      // Normal jump
+      // Standard jump — only triggers on the first frame the key is pressed
       if (
         (keysPressed[" "] === "JUST_PRESSED" ||
           keysPressed["w"] === "JUST_PRESSED") &&
@@ -66,10 +69,8 @@ class Player {
       }
     }
 
-    // Gravity only added here when not in water — Physics owns it in water
-    if (!this.isInWater) {
-      this.vy += this.gravity;
-    }
+    // Gravity is added here for land; PhysicsSystem takes over when in water
+    if (!this.isInWater) this.vy += this.gravity;
   }
 
   render() {
@@ -78,15 +79,14 @@ class Player {
     this.DOMElement.style.transform =
       this.facing === "left" ? "scaleX(-1)" : "scaleX(1)";
 
-    // ─── WALKING ANIMATION TRIGGER ───────────────────────────────
-    // If moving left/right and on the ground, apply walking class
+    // Walking GIF is triggered via CSS — only swap while moving on the ground
     if (Math.abs(this.vx) > 0.01 && this.isGrounded) {
       this.DOMElement.classList.add("walking");
     } else {
       this.DOMElement.classList.remove("walking");
     }
 
-    // Visual tint when submerged
+    // Visual tints for water and freeze states
     if (this.isFrozen) {
       this.DOMElement.classList.add("frozen");
       this.DOMElement.classList.remove("submerged");

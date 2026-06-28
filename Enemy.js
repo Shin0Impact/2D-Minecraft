@@ -1,41 +1,49 @@
+// Enemy.js — base class for all enemy types: zombie, skeleton, goblin
+
 class Enemy {
   constructor(startX, startY, type, gridInstance) {
     this.x = startX;
     this.y = startY;
     this.width = 30;
     this.height = 45;
-    this.type = type; // "zombie", "skeleton", or "goblin"
+    this.type = type;
     this.grid = gridInstance;
-    this.health = type === "goblin" ? 2 : 3;
     this.facing = "left";
     this.knockbackTimer = 0;
+    this.jumpCooldownTimer = 0;
     this.isGrounded = false;
-
-    // Dynamic stats based on enemy profiles
-    if (this.type === "goblin") {
-      this.sightRange = 250; // Sight line to stop and shoot arrows
-      this.attackRange = 25; // Lower melee range so it doesn't instantly hit you via tick()
-      this.attackRate = 210; // Slowed fire rate (~3.5 seconds at 60fps)
-      this.baseSpeed = 0.75;
-    } else {
-      this.sightRange = 25; // Melee reach for skeletons/zombies
-      this.attackRange = 25;
-      this.attackRate = 90;
-      this.baseSpeed = 0.5;
-    }
-    this.attackCooldown = 0;
-
+    this.isInWater = false;
+    this.swimmingUp = false;
     this.vx = 0;
     this.vy = 0;
     this.gravity = 0.5;
-
-    // Water state variables for Physics.js
-    this.isInWater = false;
-    this.swimmingUp = false;
-
-    // Jump parameters
     this.jumpForce = -10;
-    this.jumpCooldownTimer = 0;
+    this.attackCooldown = 0;
+
+    // Each type gets different stats — one constructor handles all three
+    if (type === "goblin") {
+      this.health = 2;
+      this.baseSpeed = 0.75;
+      this.sightRange = 250; // far — goblin shoots from a distance
+      this.attackRange = 25;
+      this.attackRate = 210; // ~3.5 s between shots at 60fps
+    } else if (type === "skeleton") {
+      this.health = 2;
+      this.baseSpeed = 0.85;
+      this.sightRange = 25;
+      this.attackRange = 25;
+      this.attackRate = 90;
+    } else {
+      // zombie defaults
+      this.health = 3;
+      this.baseSpeed = 0.5;
+      this.sightRange = 25;
+      this.attackRange = 25;
+      this.attackRate = 90;
+    }
+
+    // Skeletons avoid water; zombies wade through it
+    this.canSwim = type !== "skeleton";
 
     this.DOMElement = document.createElement("article");
     this.DOMElement.className = `enemy ${this.type}`;
@@ -48,158 +56,83 @@ class Enemy {
     this.knockbackTimer = 8;
   }
 
-  // Helper method to spawn arrow projectiles for the Archer Goblin
-  fireArrow(playerTarget) {
-    const arrow = document.createElement("div");
-    arrow.className = "arrow-projectile";
+  // Goblin delegates to ProjectileSystem — keeps projectile logic in one place
+  _fireArrow(playerTarget) {
+    if (typeof Minecraft2D !== "undefined" && Minecraft2D.projectile) {
+      Minecraft2D.projectile.fireEnemyArrow(this, playerTarget);
+    }
+  }
 
-    // Spawn arrow near goblin center
-    let arrowX = this.x + this.width / 2;
-    let arrowY = this.y + this.height / 3;
-    arrow.style.left = `${arrowX}px`;
-    arrow.style.top = `${arrowY}px`;
-
-    document.getElementById("stage").appendChild(arrow);
-
-    // Calculate trajectory vector directly toward the player
-    const dx = playerTarget.x + playerTarget.width / 2 - arrowX;
-    const dy = playerTarget.y + playerTarget.height / 2 - arrowY;
-    const dist = Math.hypot(dx, dy);
-
-    const arrowSpeed = 5;
-    const avx = (dx / dist) * arrowSpeed;
-    const avy = (dy / dist) * arrowSpeed;
-
-    // Calculate the angle in radians and convert to degrees to stop reverse flying bugs
-    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-    arrow.style.transform = `rotate(${angle}deg)`;
-
-    // Micro projectile loop running directly inside the window context
-    const arrowInterval = setInterval(() => {
-      const screensUp =
-        !document.getElementById("landingPage").classList.contains("hidden") ||
-        !document.getElementById("gameOverScreen").classList.contains("hidden");
-      if (screensUp) return;
-
-      arrowX += avx;
-      arrowY += avy;
-      arrow.style.left = `${arrowX}px`;
-      arrow.style.top = `${arrowY}px`;
-
-      // Check collision using bounding boxes manually
-      const playerHitbox = {
-        x: playerTarget.x,
-        y: playerTarget.y,
-        width: playerTarget.width,
-        height: playerTarget.height,
-      };
-      const arrowHitbox = { x: arrowX, y: arrowY, width: 8, height: 8 };
-
-      const hitPlayer =
-        arrowHitbox.x < playerHitbox.x + playerHitbox.width &&
-        arrowHitbox.x + arrowHitbox.width > playerHitbox.x &&
-        arrowHitbox.y < playerHitbox.y + playerHitbox.height &&
-        arrowHitbox.y + arrowHitbox.height > playerHitbox.y;
-
-      // Handle impact
-      if (hitPlayer) {
-        clearInterval(arrowInterval);
-        arrow.remove();
-
-        // Route directly through the explicit global variable object 'Minecraft2D'
-        if (typeof Minecraft2D !== "undefined" && Minecraft2D.combat) {
-          Minecraft2D.combat.takeDamage(this);
-        }
-      }
-
-      // Despawn arrow if it runs out of range or hits a tile layout wall
-      if (this.grid.isTileSolidAt(arrowX, arrowY)) {
-        clearInterval(arrowInterval);
-        arrow.remove();
-      }
-    }, 1000 / 60);
-
-    // Safety fallback: Clean up arrows that fly into space indefinitely after 4 seconds
-    setTimeout(() => {
-      clearInterval(arrowInterval);
-      if (arrow.parentNode) arrow.remove();
-    }, 4000);
+  // Returns true if the tile directly ahead at foot level is water
+  _waterAhead() {
+    const nextX = this.vx > 0 ? this.x + this.width + 2 : this.x - 2;
+    const footY = this.y + this.height - 4;
+    return this.grid.getTileTypeAt(nextX, footY) === "water";
   }
 
   update(playerTarget) {
-    if (this.attackCooldown > 0) {
-      this.attackCooldown--;
-    }
-
-    if (this.jumpCooldownTimer > 0) {
-      this.jumpCooldownTimer--;
-    }
+    if (this.attackCooldown > 0) this.attackCooldown--;
+    if (this.jumpCooldownTimer > 0) this.jumpCooldownTimer--;
 
     if (this.knockbackTimer > 0) {
       this.knockbackTimer--;
       this.vx *= 0.9;
     } else {
-      const enemyCenter = this.x + this.width / 2;
-      const playerCenter = playerTarget.x + playerTarget.width / 2;
-      const horizontalDistance = Math.abs(enemyCenter - playerCenter);
-      const verticalDistance = Math.abs(this.y - playerTarget.y);
+      const ec = this.x + this.width / 2;
+      const pc = playerTarget.x + playerTarget.width / 2;
+      const hDist = Math.abs(ec - pc);
+      const vDist = Math.abs(this.y - playerTarget.y);
 
-      // Check if player is inside the entity's distinct vision sight line
-      if (
-        horizontalDistance <= this.sightRange &&
-        verticalDistance < (this.type === "goblin" ? 200 : this.height)
-      ) {
+      const inRange =
+        hDist <= this.sightRange &&
+        vDist < (this.type === "goblin" ? 200 : this.height);
+
+      if (inRange) {
+        // Stop and face the player; goblin fires an arrow
         this.vx = 0;
-        this.facing = enemyCenter < playerCenter ? "right" : "left";
+        this.facing = ec < pc ? "right" : "left";
         this.swimmingUp = false;
-
-        // Archer logic: Instead of contact melee damage, spawn an arrow projectile on cooldown
         if (this.type === "goblin" && this.attackCooldown === 0) {
-          this.fireArrow(playerTarget);
+          this._fireArrow(playerTarget);
           this.attackCooldown = this.attackRate;
         }
       } else {
-        // Apply swimming horizontal speed modifiers uniformly
-        let targetSpeed = this.isInWater
-          ? this.baseSpeed * 0.5
-          : this.baseSpeed;
-        if (this.x < playerTarget.x) {
-          this.vx = targetSpeed;
-          this.facing = "right";
-        } else if (this.x > playerTarget.x) {
-          this.vx = -targetSpeed;
-          this.facing = "left";
-        } else {
+        // Chase the player
+        const dir = this.x < playerTarget.x ? 1 : -1;
+        let speed = this.isInWater ? this.baseSpeed * 0.5 : this.baseSpeed;
+        this.vx = dir * speed;
+        this.facing = dir > 0 ? "right" : "left";
+
+        // Skeleton turns back if water is in the way
+        if (!this.canSwim && this._waterAhead()) {
           this.vx = 0;
         }
 
-        // ─── STATE MACHINE: WATER TRACKING VS LAND RUNNING ───────────────────
-        if (this.isInWater && this.type !== "skeleton") {
-          if (this.y > playerTarget.y + 10) {
-            this.swimmingUp = true;
-          } else {
-            this.swimmingUp = false;
-          }
+        if (this.isInWater && this.canSwim) {
+          // Always swim upward while in water — Physics stops the force once chest clears surface
+          this.swimmingUp = true;
         } else {
           this.swimmingUp = false;
-
+          // Jump over solid obstacles — with a cooldown to avoid spam jumping
           if (this.isGrounded && Math.abs(this.vx) > 0) {
-            let nextCheckX = this.vx > 0 ? this.x + this.width + 2 : this.x - 2;
-            let kneeHeightY = this.y + this.height - 10;
-
-            if (this.grid.isTileSolidAt(nextCheckX, kneeHeightY)) {
-              if (this.jumpCooldownTimer === 0) {
-                this.vy = this.jumpForce;
-                this.isGrounded = false;
-                this.jumpCooldownTimer = 120;
-              }
+            const nextX = this.vx > 0 ? this.x + this.width + 2 : this.x - 2;
+            const kneeY = this.y + this.height - 10;
+            if (
+              this.grid.isTileSolidAt(nextX, kneeY) &&
+              this.jumpCooldownTimer === 0
+            ) {
+              this.vy = this.jumpForce;
+              this.isGrounded = false;
+              this.jumpCooldownTimer = 120;
             }
           }
         }
       }
     }
 
-    if (!this.isInWater || this.type === "skeleton") {
+    // Skeleton always falls; swimming enemies have gravity suppressed while in water
+    // This matches the original working logic exactly
+    if (!this.isInWater || !this.canSwim) {
       this.vy += this.gravity;
     }
   }
@@ -207,13 +140,10 @@ class Enemy {
   render() {
     this.DOMElement.style.left = `${this.x}px`;
     this.DOMElement.style.top = `${this.y}px`;
-
-    if (this.facing === "left") {
-      this.DOMElement.style.transform = "scaleX(1)";
-    } else {
-      this.DOMElement.style.transform = "scaleX(-1)";
-    }
-
+    // Flip sprite to face direction of travel
+    this.DOMElement.style.transform =
+      this.facing === "left" ? "scaleX(1)" : "scaleX(-1)";
+    // Walking GIF swaps in via CSS when this class is present
     if (Math.abs(this.vx) > 0.05 && this.isGrounded) {
       this.DOMElement.classList.add("walking");
     } else {
