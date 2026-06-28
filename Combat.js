@@ -17,9 +17,10 @@ class CombatSystem {
     }
   }
 
-  // Sword swing — checks a rectangle in front of the player against every enemy
+  // Sword swing — checks in front of player against enemies OR boss
   executePlayerAttack() {
     const engine = this.engine;
+    engine.audio.play("swing");
     const attackRange = 40;
     const attackBox = {
       x:
@@ -31,15 +32,27 @@ class CombatSystem {
       height: attackRange,
     };
 
+    // Boss fight — hit the boss
+    if (engine.bossFight && engine.boss) {
+      if (engine.physics.checkCollision(attackBox, engine.boss)) {
+        engine.boss.takeDamage(2);
+        engine.boss.applyKnockback(engine.player.facing === "right" ? 1 : -1);
+      }
+      return;
+    }
+
+    // Normal enemies
     for (let i = engine.enemies.length - 1; i >= 0; i--) {
       const enemy = engine.enemies[i];
       if (engine.physics.checkCollision(attackBox, enemy)) {
-        enemy.health -= 2; // sword hits hard
+        enemy.health -= 2;
         if (enemy.health > 0) {
           enemy.applyKnockback(engine.player.facing === "right" ? 1 : -1);
         } else {
+          if (enemy._groanTimer) clearTimeout(enemy._groanTimer);
           enemy.DOMElement.remove();
           engine.enemies.splice(i, 1);
+          engine.portal?.onEnemyKilled(); // notify portal system
         }
       }
     }
@@ -51,9 +64,12 @@ class CombatSystem {
     if (engine.isInvincible) return;
 
     engine.playerHealth--;
+    engine.audio.play("hit");
     this.renderHearts();
 
     if (engine.playerHealth <= 0) {
+      engine.audio.play("death");
+      engine.audio.pauseMusic();
       document.getElementById("gameOverScreen").classList.remove("hidden");
       return;
     }

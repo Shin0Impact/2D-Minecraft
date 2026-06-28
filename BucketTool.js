@@ -34,6 +34,7 @@ class BucketTool {
       world.matrix[tileRow][tileCol] = "air";
       world.render();
       engine.bucketContents = "water";
+      engine.audio.play("splash");
       this.updateUI();
     } else if (engine.bucketContents === "water" && tileType === "air") {
       // Desert: water evaporates instantly
@@ -43,6 +44,7 @@ class BucketTool {
         world.matrix[tileRow][tileCol] = "water";
         world.render();
         world.animateTile(tileRow, tileCol, "tile-place");
+        engine.audio.play("splash");
       }
       engine.bucketContents = "empty";
       this.updateUI();

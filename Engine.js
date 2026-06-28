@@ -48,6 +48,13 @@ class GameEngine {
     this.bucket = new BucketTool(this);
     this.projectile = new ProjectileSystem(this);
     this.hover = new HoverSystem(this);
+    this.audio = new AudioSystem();
+    this.portal = new PortalSystem(this);
+
+    // Boss fight state — separate from normal gameplay
+    this.bossFight = false;
+    this.bossDefeated = false;
+    this.boss = null;
   }
 
   init() {
@@ -108,9 +115,15 @@ class GameEngine {
       else if (this.currentTool === "bow")
         this.projectile.firePlayerArrow(worldX, worldY);
       else if (this.currentTool === "bucket") this.bucket.use(worldX, worldY);
-      else if (this.currentTool.startsWith("place-"))
+      else if (this.currentTool.startsWith("place-")) {
+        // Portal slots take priority over normal block placement when active
+        if (
+          this.currentTool === "place-diamond" &&
+          this.portal.tryFillSlot(worldX, worldY)
+        )
+          return;
         this.mining.executeBlockPlacement(worldX, worldY);
-      else this.mining.executeEnvironmentMining(worldX, worldY);
+      } else this.mining.executeEnvironmentMining(worldX, worldY);
     });
 
     gw.addEventListener("mousemove", (e) => this.hover.update(e, gw));
@@ -120,16 +133,32 @@ class GameEngine {
   // Wires up the three overlay buttons: Start, Respawn, Reset
   _setupUIButtons() {
     document.getElementById("startGameBtn").addEventListener("click", () => {
+      this.audio.resume();
       this.resetWorld();
       document.getElementById("landingPage").classList.add("hidden");
+      this.audio.playMusic(this.currentTheme);
     });
     document.getElementById("respawnBtn").addEventListener("click", () => {
       document.getElementById("gameOverScreen").classList.add("hidden");
       this.resetWorld();
+      this.audio.playMusic(this.currentTheme); // resumes paused track or crossfades to new theme
     });
     document.getElementById("resetWorldBtn").addEventListener("click", () => {
       this.resetWorld();
       document.getElementById("landingPage").classList.remove("hidden");
+      this.audio.pauseMusic();
+    });
+
+    document.getElementById("playAgainBtn")?.addEventListener("click", () => {
+      document.getElementById("winScreen").classList.add("hidden");
+      this.resetWorld();
+      this.audio.playMusic(this.currentTheme);
+    });
+    document.getElementById("musicVol")?.addEventListener("input", (e) => {
+      this.audio.setMusicVolume(parseFloat(e.target.value));
+    });
+    document.getElementById("sfxVol")?.addEventListener("input", (e) => {
+      this.audio.setSfxVolume(parseFloat(e.target.value));
     });
   }
 
@@ -190,10 +219,63 @@ class GameEngine {
     this.player.isFrozen = false;
 
     this.spawner.reset();
+    this.portal.reset();
+    this.bossFight = false;
+    this.bossDefeated = false;
+    if (this.boss) {
+      this.boss.DOMElement?.remove();
+      this.boss = null;
+    }
+    document.getElementById("bossHealthBar")?.remove();
+    // Clear any stray boss bullets
+    document.querySelectorAll(".boss-bullet").forEach((b) => b.remove());
     this.combat.renderHearts();
     this.mining.updateInventoryUI();
     this.bucket.updateUI();
     this._selectTool("sword");
+  }
+
+  // Transitions from the normal world into the boss arena
+  enterBossArena() {
+    this.bossFight = true;
+    this.spawner.reset(); // clear normal enemies
+
+    // Rebuild world as superflat
+    this.world.DOMElement.innerHTML = "";
+    BossWorld.generate(this.world);
+    this.world.render();
+    document.body.dataset.theme = "cave"; // dark sky for boss arena
+
+    // Place player on the left side of the flat arena
+    const floorRow = this.world.rows - 4;
+    this.player.x = 3 * this.world.tileSize;
+    this.player.y = floorRow * this.world.tileSize - this.player.height;
+    this.player.vx = 0;
+    this.player.vy = 0;
+
+    // Restore full health for the boss fight
+    this.playerHealth = this.maxHealth;
+    this.combat.renderHearts();
+
+    // Spawn the boss
+    this.boss = new BossEnemy(this);
+    this.audio?.playMusic("desert"); // reuse desert track as boss music
+    this.portal._showAnnouncement("⚔️ Defeat the Zombie Lord!");
+  }
+
+  // Called by BossEnemy when health reaches 0
+  onBossDefeated() {
+    this.bossDefeated = true;
+    this.bossFight = false;
+    this.boss = null;
+    document.getElementById("bossHealthBar")?.remove();
+    document.querySelectorAll(".boss-bullet").forEach((b) => b.remove());
+    this.portal._showAnnouncement("🏆 YOU WIN! The Zombie Lord is defeated!");
+    this.audio?.playMusic(this.currentTheme);
+    // Show a win screen after 3 seconds
+    setTimeout(() => {
+      document.getElementById("winScreen").classList.remove("hidden");
+    }, 3000);
   }
 
   // Main loop — runs ~60 times per second via requestAnimationFrame
@@ -204,35 +286,50 @@ class GameEngine {
 
     if (!paused) {
       this.player.update(this.keysPressed, this.currentTheme);
-      this.enemies.forEach((e) => e.update(this.player));
 
-      this.physics.resolvePhysics(this.player);
-      this.enemies.forEach((e) => this.physics.resolvePhysics(e));
-
-      // Check melee contact between each enemy's attack box and the player
-      this.enemies.forEach((enemy) => {
-        if (enemy.type === "goblin") return; // goblin attacks via arrows, not melee
-        const attackBox = {
-          x:
-            enemy.facing === "right"
-              ? enemy.x + enemy.width / 2
-              : enemy.x + enemy.width / 2 - enemy.attackRange,
-          y: enemy.y + enemy.height / 3,
-          width: enemy.attackRange,
-          height: 10,
-        };
-        if (
-          this.physics.checkCollision(this.player, attackBox) &&
-          enemy.attackCooldown === 0
-        ) {
-          this.combat.takeDamage(enemy);
-          enemy.attackCooldown = enemy.attackRate;
+      if (this.bossFight && this.boss) {
+        // Boss fight — update and physics for boss only, no normal enemies
+        this.boss.update(this.player);
+        this.physics.resolvePhysics(this.player);
+        this.physics.resolvePhysics(this.boss);
+        // Player sword hit against boss
+        if (this.currentTool === "sword") {
+          // handled in executePlayerAttack via combat system
         }
-      });
+      } else {
+        // Normal gameplay
+        this.enemies.forEach((e) => e.update(this.player));
+        this.physics.resolvePhysics(this.player);
+        this.enemies.forEach((e) => this.physics.resolvePhysics(e));
+
+        this.enemies.forEach((enemy) => {
+          if (enemy.type === "goblin") return;
+          const attackBox = {
+            x:
+              enemy.facing === "right"
+                ? enemy.x + enemy.width / 2
+                : enemy.x + enemy.width / 2 - enemy.attackRange,
+            y: enemy.y + enemy.height / 3,
+            width: enemy.attackRange,
+            height: 10,
+          };
+          if (
+            this.physics.checkCollision(this.player, attackBox) &&
+            enemy.attackCooldown === 0
+          ) {
+            this.combat.takeDamage(enemy);
+            enemy.attackCooldown = enemy.attackRate;
+          }
+        });
+      }
     }
 
     this.player.render();
-    this.enemies.forEach((e) => e.render());
+    if (this.bossFight && this.boss) {
+      this.boss.render();
+    } else {
+      this.enemies.forEach((e) => e.render());
+    }
     this.camera.update();
 
     // Downgrade JUST_PRESSED to HELD so single-frame actions don't repeat

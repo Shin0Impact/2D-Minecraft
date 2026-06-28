@@ -27,6 +27,7 @@ class ProjectileSystem {
     const avy = (dy / dist) * spd;
 
     arrow.style.transform = `rotate(${Math.atan2(dy, dx) * (180 / Math.PI)}deg)`;
+    engine.audio.play("arrow");
     this._runArrowLoop(arrow, ax, ay, avx, avy, null);
   }
 
@@ -117,6 +118,17 @@ class ProjectileSystem {
 
       // Player arrow hitting an enemy
       if (!attacker) {
+        // Hit the boss if in boss fight
+        if (engine.bossFight && engine.boss) {
+          if (engine.physics.checkCollision(arrowBox, engine.boss)) {
+            clearInterval(loop);
+            clearTimeout(killTimer);
+            arrow.remove();
+            engine.boss.takeDamage(1);
+            return;
+          }
+        }
+        // Hit a normal enemy
         for (let i = engine.enemies.length - 1; i >= 0; i--) {
           const enemy = engine.enemies[i];
           if (engine.physics.checkCollision(arrowBox, enemy)) {
@@ -125,8 +137,10 @@ class ProjectileSystem {
             arrow.remove();
             enemy.health--;
             if (enemy.health <= 0) {
+              if (enemy._groanTimer) clearTimeout(enemy._groanTimer);
               enemy.DOMElement.remove();
               engine.enemies.splice(i, 1);
+              engine.portal?.onEnemyKilled();
             } else {
               enemy.applyKnockback(avx > 0 ? 1 : -1);
             }

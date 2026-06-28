@@ -71,6 +71,7 @@ class MiningSystem {
 
     world.animateTile(row, col, "tile-break");
     world.matrix[row][col] = "air";
+    engine.audio.play("mine");
     world.render();
   }
 
@@ -105,6 +106,7 @@ class MiningSystem {
       engine.inventory[blockType]--;
       this.updateInventoryUI();
       world.matrix[row][col] = blockType;
+      engine.audio.play("place");
       world.render();
       world.animateTile(row, col, "tile-place");
     }

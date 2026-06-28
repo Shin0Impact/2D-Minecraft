@@ -55,7 +55,23 @@ class PhysicsSystem {
     }
 
     const inWater = this._inWater(entity);
+    const wasInWater = entity.isInWater; // state from previous tick
     entity.isInWater = inWater;
+
+    // Splash when entering water, swim sound while moving through it
+    if (isPlayer) {
+      if (inWater && !wasInWater) {
+        Minecraft2D?.audio?.play("splash");
+      } else if (inWater && wasInWater && Math.abs(entity.vx) > 0.5) {
+        // Swim sound — throttled so it doesn't fire every single frame
+        if (!this._swimSoundTimer) {
+          this._swimSoundTimer = setTimeout(() => {
+            Minecraft2D?.audio?.play("swim");
+            this._swimSoundTimer = null;
+          }, 600);
+        }
+      }
+    }
 
     // Apply the submerged CSS tint to enemies (player handles its own in render)
     if (!isPlayer && entity.DOMElement) {

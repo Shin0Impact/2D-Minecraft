@@ -66,6 +66,7 @@ class Player {
       ) {
         this.vy = this.jumpForce;
         this.isGrounded = false;
+        if (typeof Minecraft2D !== "undefined") Minecraft2D.audio.play("jump");
       }
     }
 

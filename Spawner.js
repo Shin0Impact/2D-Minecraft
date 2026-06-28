@@ -51,6 +51,7 @@ class SpawnerSystem {
       !document.getElementById("gameOverScreen").classList.contains("hidden");
     if (screensUp) return;
     if (engine.enemies.length >= this.maxEnemies) return;
+    if (engine.bossFight || engine.portal?.portalActive) return; // no spawns during boss/portal
 
     const world = engine.world;
     const left = engine.cameraX;

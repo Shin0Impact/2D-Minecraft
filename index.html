@@ -50,6 +50,28 @@
         </div>
 
         <button id="startGameBtn" class="mc-btn">Start Game</button>
+
+        <div class="volume-row">
+          <label
+            >🎵 Music
+            <input
+              type="range"
+              id="musicVol"
+              min="0"
+              max="1"
+              step="0.05"
+              value="0.35"
+          /></label>
+          <label
+            >🔊 SFX &nbsp;&nbsp;<input
+              type="range"
+              id="sfxVol"
+              min="0"
+              max="1"
+              step="0.05"
+              value="0.5"
+          /></label>
+        </div>
       </div>
     </section>
 
@@ -59,6 +81,15 @@
         <h1 class="game-over-text">Game Over</h1>
         <p>You were defeated by an enemy!</p>
         <button id="respawnBtn" class="mc-btn">Respawn &amp; Reset</button>
+      </div>
+    </section>
+
+    <!-- ── WIN SCREEN ──────────────────────────────── -->
+    <section id="winScreen" class="overlay-screen hidden">
+      <div class="menu-card">
+        <h1 class="game-logo">🏆 VICTORY!</h1>
+        <p>The Zombie Lord has been defeated!</p>
+        <button id="playAgainBtn" class="mc-btn">Play Again</button>
       </div>
     </section>
 
@@ -75,6 +106,7 @@
         <button id="resetWorldBtn" class="top-reset-btn" title="Reset World">
           🔄
         </button>
+        <div id="killBadge">☠️ 10 kills to portal</div>
       </main>
 
       <!-- ── HOTBAR ─────────────────────────────────── -->
@@ -183,6 +215,10 @@
       </footer>
     </section>
 
+    <!-- Boss system -->
+    <script src="BossWorld.js"></script>
+    <script src="BossEnemy.js"></script>
+    <script src="PortalSystem.js"></script>
     <script src="World.js"></script>
     <script src="Player.js"></script>
     <script src="Enemy.js"></script>
@@ -194,6 +230,7 @@
     <script src="Projectile.js"></script>
     <script src="HoverSystem.js"></script>
     <script src="Spawner.js"></script>
+    <script src="AudioSystem.js"></script>
     <script src="Engine.js"></script>
   </body>
 </html>
