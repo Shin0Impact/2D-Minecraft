@@ -48,17 +48,55 @@ class Enemy {
     this.DOMElement = document.createElement("article");
     this.DOMElement.className = `enemy ${this.type}`;
     document.getElementById("enemyContainer").appendChild(this.DOMElement);
+
+    // Each enemy type groans randomly — volume scales with distance from player
+    this._startAmbientSound();
+  }
+
+  // Schedules random ambient sounds for this enemy type
+  _startAmbientSound() {
+    const sounds = {
+      zombie: { name: "zombie_say", minMs: 8000, maxMs: 15000 },
+      skeleton: { name: "skeleton_say", minMs: 6000, maxMs: 12000 },
+      goblin: { name: "goblin_laugh", minMs: 10000, maxMs: 20000 },
+    };
+    const cfg = sounds[this.type];
+    if (!cfg) return;
+
+    const schedule = () => {
+      if (typeof Minecraft2D !== "undefined") {
+        Minecraft2D.audio.playAt(cfg.name, this.x, this.y);
+      }
+      this._groanTimer = setTimeout(
+        schedule,
+        cfg.minMs + Math.random() * (cfg.maxMs - cfg.minMs),
+      );
+    };
+    // Stagger first sound so all enemies don't groan at the same time on spawn
+    this._groanTimer = setTimeout(schedule, 2000 + Math.random() * cfg.minMs);
   }
 
   applyKnockback(directionX) {
     this.vx = directionX * 6;
     this.vy = -4;
     this.knockbackTimer = 8;
+    // Play hurt sound for this enemy type, scaled by distance
+    const hurtSounds = {
+      zombie: "zombie_hurt",
+      skeleton: "skeleton_hurt",
+      goblin: "goblin_hurt",
+    };
+    const snd = hurtSounds[this.type];
+    if (snd && typeof Minecraft2D !== "undefined") {
+      Minecraft2D.audio.playAt(snd, this.x, this.y);
+    }
   }
 
-  // Goblin delegates to ProjectileSystem — keeps projectile logic in one place
+  // Goblin delegates to ProjectileSystem — witch laugh on fire, arrow sound on release
   _fireArrow(playerTarget) {
     if (typeof Minecraft2D !== "undefined" && Minecraft2D.projectile) {
+      Minecraft2D.audio.playAt("goblin_laugh", this.x, this.y);
+      Minecraft2D.audio.play("arrow");
       Minecraft2D.projectile.fireEnemyArrow(this, playerTarget);
     }
   }
