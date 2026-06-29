@@ -37,6 +37,7 @@ class GameEngine {
       diamond: 0,
       sand: 0,
       snow: 0,
+      apple: 0,
     };
 
     // All systems receive a reference to this engine so they can read/write shared state
@@ -98,6 +99,7 @@ class GameEngine {
     window.addEventListener("keydown", (e) => {
       if (!this.keysPressed[e.key]) this.keysPressed[e.key] = "JUST_PRESSED";
       if (toolMap[e.key]) this._selectTool(toolMap[e.key]);
+      if (e.key === "e" || e.key === "E") this.mining.useApple();
     });
     window.addEventListener("keyup", (e) => (this.keysPressed[e.key] = false));
   }
@@ -115,6 +117,7 @@ class GameEngine {
       else if (this.currentTool === "bow")
         this.projectile.firePlayerArrow(worldX, worldY);
       else if (this.currentTool === "bucket") this.bucket.use(worldX, worldY);
+      else if (this.currentTool === "apple") this.mining.useApple();
       else if (this.currentTool.startsWith("place-")) {
         // Portal slots take priority over normal block placement when active
         if (
@@ -130,7 +133,7 @@ class GameEngine {
     gw.addEventListener("mouseleave", () => this.hover.clear());
   }
 
-  // Wires up the three overlay buttons: Start, Respawn, Reset
+  // Wires up all overlay buttons and volume sliders
   _setupUIButtons() {
     document.getElementById("startGameBtn").addEventListener("click", () => {
       this.audio.resume();
@@ -138,11 +141,13 @@ class GameEngine {
       document.getElementById("landingPage").classList.add("hidden");
       this.audio.playMusic(this.currentTheme);
     });
+
     document.getElementById("respawnBtn").addEventListener("click", () => {
       document.getElementById("gameOverScreen").classList.add("hidden");
       this.resetWorld();
-      this.audio.playMusic(this.currentTheme); // resumes paused track or crossfades to new theme
+      this.audio.playMusic(this.currentTheme);
     });
+
     document.getElementById("resetWorldBtn").addEventListener("click", () => {
       this.resetWorld();
       document.getElementById("landingPage").classList.remove("hidden");
@@ -154,9 +159,11 @@ class GameEngine {
       this.resetWorld();
       this.audio.playMusic(this.currentTheme);
     });
+
     document.getElementById("musicVol")?.addEventListener("input", (e) => {
       this.audio.setMusicVolume(parseFloat(e.target.value));
     });
+
     document.getElementById("sfxVol")?.addEventListener("input", (e) => {
       this.audio.setSfxVolume(parseFloat(e.target.value));
     });
@@ -288,14 +295,9 @@ class GameEngine {
       this.player.update(this.keysPressed, this.currentTheme);
 
       if (this.bossFight && this.boss) {
-        // Boss fight — update and physics for boss only, no normal enemies
         this.boss.update(this.player);
         this.physics.resolvePhysics(this.player);
         this.physics.resolvePhysics(this.boss);
-        // Player sword hit against boss
-        if (this.currentTool === "sword") {
-          // handled in executePlayerAttack via combat system
-        }
       } else {
         // Normal gameplay
         this.enemies.forEach((e) => e.update(this.player));

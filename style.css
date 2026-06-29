@@ -812,3 +812,34 @@ body[data-theme="snow"] .air {
   border-color: #f1c40f;
   box-shadow: 0 0 40px rgba(241, 196, 15, 0.5);
 }
+
+/* ─── Apple hotbar slot ──────────────────────────── */
+.apple-preview {
+  font-size: 20px;
+  line-height: 1;
+}
+
+/* Floating "+🍎 Apple!" text that pops up when a leaf drops one */
+.drop-text {
+  position: absolute;
+  font-family: "Courier New", monospace;
+  font-size: 13px;
+  font-weight: bold;
+  color: #2ecc71;
+  text-shadow: 1px 1px 0 #000;
+  pointer-events: none;
+  z-index: 50;
+  white-space: nowrap;
+  animation: dropTextFloat 1.4s ease-out forwards;
+}
+
+@keyframes dropTextFloat {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-40px);
+  }
+}

@@ -64,7 +64,16 @@ class MiningSystem {
     const tileType = world.matrix[row][col];
     if (!this._canBreak(engine.currentTool, tileType)) return;
 
-    if (engine.inventory[tileType] !== undefined) {
+    // Leaves have a 50% chance to drop an apple instead of the leaf block
+    if (tileType === "leaves" && Math.random() < 0.5) {
+      engine.inventory.apple++;
+      this.updateInventoryUI();
+      this._showDropText(
+        "🍎 Apple!",
+        col * world.tileSize,
+        row * world.tileSize,
+      );
+    } else if (engine.inventory[tileType] !== undefined) {
       engine.inventory[tileType]++;
       this.updateInventoryUI();
     }
@@ -73,6 +82,31 @@ class MiningSystem {
     world.matrix[row][col] = "air";
     engine.audio.play("mine");
     world.render();
+  }
+
+  // Eating an apple heals one heart — called when player clicks the apple hotbar slot
+  useApple() {
+    const engine = this.engine;
+    if (engine.inventory.apple <= 0) return;
+    if (engine.playerHealth >= engine.maxHealth) return; // already full
+    engine.inventory.apple--;
+    engine.playerHealth++;
+    engine.combat.renderHearts();
+    engine.audio.play("place"); // satisfying nom sound
+    this.updateInventoryUI();
+  }
+
+  // Floats a small text label above the broken tile then fades it out
+  _showDropText(text, worldX, worldY) {
+    const label = document.createElement("div");
+    label.className = "drop-text";
+    label.textContent = text;
+    label.style.left = `${worldX}px`;
+    label.style.top = `${worldY - 10}px`;
+    document.getElementById("stage").appendChild(label);
+    label.addEventListener("animationend", () => label.remove(), {
+      once: true,
+    });
   }
 
   // Left-click with a place-X tool — puts a block from inventory into the world
