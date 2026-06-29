@@ -41,6 +41,13 @@ class CombatSystem {
       return;
     }
 
+    // Hit skull minions (phase 2)
+    engine.skullMinions?.forEach((skull) => {
+      if (engine.physics.checkCollision(attackBox, skull)) {
+        skull.takeDamage(2);
+      }
+    });
+
     // Normal enemies
     for (let i = engine.enemies.length - 1; i >= 0; i--) {
       const enemy = engine.enemies[i];

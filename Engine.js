@@ -55,7 +55,9 @@ class GameEngine {
     // Boss fight state — separate from normal gameplay
     this.bossFight = false;
     this.bossDefeated = false;
+    this.playerWon = false; // pauses the game loop on victory
     this.boss = null;
+    this.skullMinions = [];
   }
 
   init() {
@@ -155,6 +157,7 @@ class GameEngine {
     });
 
     document.getElementById("playAgainBtn")?.addEventListener("click", () => {
+      this.playerWon = false;
       document.getElementById("winScreen").classList.add("hidden");
       this.resetWorld();
       this.audio.playMusic(this.currentTheme);
@@ -229,10 +232,13 @@ class GameEngine {
     this.portal.reset();
     this.bossFight = false;
     this.bossDefeated = false;
+    this.playerWon = false;
     if (this.boss) {
       this.boss.DOMElement?.remove();
       this.boss = null;
     }
+    this.skullMinions.forEach((s) => s.DOMElement?.remove());
+    this.skullMinions = [];
     document.getElementById("bossHealthBar")?.remove();
     // Clear any stray boss bullets
     document.querySelectorAll(".boss-bullet").forEach((b) => b.remove());
@@ -274,20 +280,25 @@ class GameEngine {
   onBossDefeated() {
     this.bossDefeated = true;
     this.bossFight = false;
+    this.playerWon = true; // freezes the game loop immediately — no more damage possible
     this.boss = null;
-    document.getElementById("bossHealthBar")?.remove();
+    // Clear all projectiles and minions right away
     document.querySelectorAll(".boss-bullet").forEach((b) => b.remove());
+    this.skullMinions.forEach((s) => s.DOMElement.remove());
+    this.skullMinions = [];
+    document.getElementById("bossHealthBar")?.remove();
     this.portal._showAnnouncement("🏆 YOU WIN! The Zombie Lord is defeated!");
-    this.audio?.playMusic(this.currentTheme);
-    // Show a win screen after 3 seconds
+    this.audio?.pauseMusic();
+    // Show win screen after a short celebration pause
     setTimeout(() => {
       document.getElementById("winScreen").classList.remove("hidden");
-    }, 3000);
+    }, 2000);
   }
 
   // Main loop — runs ~60 times per second via requestAnimationFrame
   tick() {
     const paused =
+      this.playerWon ||
       !document.getElementById("landingPage").classList.contains("hidden") ||
       !document.getElementById("gameOverScreen").classList.contains("hidden");
 
