@@ -45,6 +45,11 @@ class Enemy {
     // Skeletons avoid water; zombies wade through it
     this.canSwim = type !== "skeleton";
 
+    // Sight and memory state
+    this.isAggro = false; // true when actively chasing the player
+    this.aggroTimer = 0; // frames of memory after losing sight
+    this.lastKnownX = this.x; // last x position the player was seen at
+
     this.DOMElement = document.createElement("article");
     this.DOMElement.className = `enemy ${this.type}`;
     document.getElementById("enemyContainer").appendChild(this.DOMElement);
@@ -115,61 +120,103 @@ class Enemy {
     if (this.knockbackTimer > 0) {
       this.knockbackTimer--;
       this.vx *= 0.9;
+      return;
+    }
+
+    // ── Sight check ──────────────────────────────────────────────────────────
+    // Enemy can only spot the player if they are on roughly the same level
+    // (within 1.5 tile heights) and within their horizontal detection range
+    const ec = this.x + this.width / 2;
+    const pc = playerTarget.x + playerTarget.width / 2;
+    const hDist = Math.abs(ec - pc);
+
+    // Compare feet positions — same-level means both standing on the same floor
+    const myFeet = this.y + this.height;
+    const playerFeet = playerTarget.y + playerTarget.height;
+    const sameLevel = Math.abs(myFeet - playerFeet) < this.grid.tileSize * 1.8;
+
+    // Detection ranges per type (horizontal pixels, only on same level)
+    const detectionRange =
+      {
+        zombie: 320,
+        skeleton: 400,
+        goblin: 500,
+      }[this.type] || 320;
+
+    const canSee = sameLevel && hDist <= detectionRange;
+
+    if (canSee) {
+      // Refresh memory — enemy knows exactly where the player is
+      this.lastKnownX = pc;
+      this.aggroTimer = 180; // remember for 3 seconds after losing sight
+      this.isAggro = true;
+    } else if (this.aggroTimer > 0) {
+      // Lost direct sight but still remembers — keep chasing last known position
+      this.aggroTimer--;
+      if (this.aggroTimer <= 0) this.isAggro = false;
+    }
+
+    if (!this.isAggro) {
+      // Idle — stand still and face forward
+      this.vx = 0;
+      this.swimmingUp = false;
+      if (this.isInWater && this.canSwim) this.swimmingUp = true;
+      this._applyGravity();
+      return;
+    }
+
+    // ── Goblin attack range — stop and shoot when close enough ───────────────
+    const goblinInRange =
+      this.type === "goblin" && hDist <= this.sightRange && sameLevel;
+
+    if (goblinInRange) {
+      this.vx = 0;
+      this.facing = ec < pc ? "right" : "left";
+      this.swimmingUp = false;
+      if (this.attackCooldown === 0) {
+        this._fireArrow(playerTarget);
+        this.attackCooldown = this.attackRate;
+      }
+      this._applyGravity();
+      return;
+    }
+
+    // ── Chase toward last known position ─────────────────────────────────────
+    const targetX = canSee ? pc : this.lastKnownX;
+    const dir = ec < targetX ? 1 : -1;
+    let speed = this.isInWater ? this.baseSpeed * 0.5 : this.baseSpeed;
+    this.vx = dir * speed;
+    this.facing = dir > 0 ? "right" : "left";
+
+    // Skeleton turns back at water
+    if (!this.canSwim && this._waterAhead()) {
+      this.vx = 0;
+    }
+
+    if (this.isInWater && this.canSwim) {
+      this.swimmingUp = true;
     } else {
-      const ec = this.x + this.width / 2;
-      const pc = playerTarget.x + playerTarget.width / 2;
-      const hDist = Math.abs(ec - pc);
-      const vDist = Math.abs(this.y - playerTarget.y);
-
-      const inRange =
-        hDist <= this.sightRange &&
-        vDist < (this.type === "goblin" ? 200 : this.height);
-
-      if (inRange) {
-        // Stop and face the player; goblin fires an arrow
-        this.vx = 0;
-        this.facing = ec < pc ? "right" : "left";
-        this.swimmingUp = false;
-        if (this.type === "goblin" && this.attackCooldown === 0) {
-          this._fireArrow(playerTarget);
-          this.attackCooldown = this.attackRate;
-        }
-      } else {
-        // Chase the player
-        const dir = this.x < playerTarget.x ? 1 : -1;
-        let speed = this.isInWater ? this.baseSpeed * 0.5 : this.baseSpeed;
-        this.vx = dir * speed;
-        this.facing = dir > 0 ? "right" : "left";
-
-        // Skeleton turns back if water is in the way
-        if (!this.canSwim && this._waterAhead()) {
-          this.vx = 0;
-        }
-
-        if (this.isInWater && this.canSwim) {
-          // Always swim upward while in water — Physics stops the force once chest clears surface
-          this.swimmingUp = true;
-        } else {
-          this.swimmingUp = false;
-          // Jump over solid obstacles — with a cooldown to avoid spam jumping
-          if (this.isGrounded && Math.abs(this.vx) > 0) {
-            const nextX = this.vx > 0 ? this.x + this.width + 2 : this.x - 2;
-            const kneeY = this.y + this.height - 10;
-            if (
-              this.grid.isTileSolidAt(nextX, kneeY) &&
-              this.jumpCooldownTimer === 0
-            ) {
-              this.vy = this.jumpForce;
-              this.isGrounded = false;
-              this.jumpCooldownTimer = 120;
-            }
-          }
+      this.swimmingUp = false;
+      // Jump over solid obstacles
+      if (this.isGrounded && Math.abs(this.vx) > 0) {
+        const nextX = this.vx > 0 ? this.x + this.width + 2 : this.x - 2;
+        const kneeY = this.y + this.height - 10;
+        if (
+          this.grid.isTileSolidAt(nextX, kneeY) &&
+          this.jumpCooldownTimer === 0
+        ) {
+          this.vy = this.jumpForce;
+          this.isGrounded = false;
+          this.jumpCooldownTimer = 120;
         }
       }
     }
 
+    this._applyGravity();
+  }
+
+  _applyGravity() {
     // Skeleton always falls; swimming enemies have gravity suppressed while in water
-    // This matches the original working logic exactly
     if (!this.isInWater || !this.canSwim) {
       this.vy += this.gravity;
     }
