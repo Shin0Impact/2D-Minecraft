@@ -158,6 +158,7 @@ and keeping thinging of more stuff to add meant more work haha
 ## Known Bugs
 
 You cant move using wasd with caplock on but honestly its such a small bug i focused on other things
+sometimes there arent enough diamonds spawned in the world generation so u cant reach the boss
 
 ---
 
