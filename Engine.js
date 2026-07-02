@@ -154,7 +154,7 @@ class GameEngine {
       // Bow — must hold 500ms to draw before releasing
       if (this.currentTool === "bow" && this._bowDownTime != null) {
         const held = Date.now() - this._bowDownTime;
-        if (held >= 500) {
+        if (held >= 50) {
           this.projectile.firePlayerArrow(this._bowAimX, this._bowAimY);
         }
         this._bowDownTime = null;
