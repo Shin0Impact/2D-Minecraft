@@ -154,7 +154,7 @@ class GameEngine {
       // Bow — must hold 500ms to draw before releasing
       if (this.currentTool === "bow" && this._bowDownTime != null) {
         const held = Date.now() - this._bowDownTime;
-        if (held >= 50) {
+        if (held >= 500) {
           this.projectile.firePlayerArrow(this._bowAimX, this._bowAimY);
         }
         this._bowDownTime = null;
@@ -302,7 +302,7 @@ class GameEngine {
 
     // Spawn the boss
     this.boss = new BossEnemy(this);
-    this.audio?.playMusic("desert"); // reuse desert track as boss music
+    this.audio?.playMusic("boss");
     this.portal._showAnnouncement("⚔️ Defeat the Zombie Lord!");
   }
 

@@ -634,7 +634,7 @@ body[data-theme="snow"] .air {
 
 /* Portal frame DOM overlay */
 .portal-frame {
-  width: 90px;
+  width: 135px;
   min-height: 180px;
   background: linear-gradient(180deg, #6c3483, #1a1a2e);
   border: 3px solid #9b59b6;

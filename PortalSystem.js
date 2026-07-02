@@ -42,10 +42,10 @@ class PortalSystem {
     const frameCol = targetCol;
     const frameRow = surfaceRow - 4;
 
-    // Store position for click detection
-    this.portalCol = frameCol + 1;
+    // Store position for click detection — covers the full 3-tile wide frame
+    this.portalCol = frameCol;
     this.portalRow = frameRow;
-    this.portalX = (frameCol + 1) * world.tileSize;
+    this.portalX = frameCol * world.tileSize;
     this.portalY = frameRow * world.tileSize;
 
     // Carve frame into world matrix
@@ -92,13 +92,12 @@ class PortalSystem {
       </div>`;
   }
 
-  // Keeps the portal DOM element aligned with the world as camera moves
   _positionPortalDOM() {
     if (!this.DOMElement) return;
-    const engine = this.engine;
     this.DOMElement.style.position = "absolute";
     this.DOMElement.style.left = `${this.portalX}px`;
     this.DOMElement.style.top = `${this.portalY}px`;
+    this.DOMElement.style.width = "135px";
     this.DOMElement.style.zIndex = "20";
   }
 
@@ -106,11 +105,10 @@ class PortalSystem {
   tryFillSlot(worldX, worldY) {
     if (!this.portalActive) return false;
 
-    // Check click lands anywhere within the portal DOM element's world-space bounding box
-    // Portal overlay is 90px wide x 180px tall, anchored at portalX/portalY
+    // Full 3-tile wide frame = 135px
     const inPortal =
       worldX >= this.portalX &&
-      worldX <= this.portalX + 90 &&
+      worldX <= this.portalX + 135 &&
       worldY >= this.portalY &&
       worldY <= this.portalY + 180;
     if (!inPortal) return false;
