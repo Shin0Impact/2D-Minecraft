@@ -198,7 +198,7 @@ class BossEnemy {
   }
 
   _die() {
-    // Clear skull minions on death
+    this._removeShadowMarker();
     this.engine.skullMinions.forEach((s) => s.DOMElement.remove());
     this.engine.skullMinions = [];
     this.engine.audio?.play("death");
@@ -240,13 +240,41 @@ class BossEnemy {
         // Stomp pattern transitions to JUMPING, everything else goes to RECOVERING
       }
     } else if (this.state === "JUMPING") {
-      // Air phase of the stomp — physics moves the boss, we steer horizontally
+      // Rising phase — go straight up, no horizontal movement yet
+      this.vx = 0;
+      // Suppress gravity until we reach the target height
+      if (this.vy < 0) {
+        this.vy += this.gravity; // still rising
+      } else {
+        // Reached peak — transition to hover
+        this.vy = 0;
+        this._enterState("HOVER");
+        this._spawnShadowMarker();
+      }
+    } else if (this.state === "HOVER") {
+      // Drift slowly over the player — no gravity, giving player time to dodge
       const tx = this.jumpTarget;
       const bx = this.x + this.width / 2;
-      this.vx = bx < tx ? 6 : -6;
-      // Close enough horizontally or just landed — trigger shockwave
+      // Gentle horizontal tracking toward current player position
+      this.jumpTarget = player.x + player.width / 2; // keep updating while hovering
+      this.vx = bx < this.jumpTarget ? 1.5 : -1.5;
+      this.vy = 0; // hold altitude
+
+      // Update shadow marker position on the ground
+      this._updateShadowMarker();
+
+      // After hover window, drop
+      if (this.stateTimer >= 70) {
+        this._removeShadowMarker();
+        this._enterState("DROPPING");
+      }
+    } else if (this.state === "DROPPING") {
+      // Fall fast — gravity amplified so the drop feels heavy and deliberate
+      this.vx = 0;
+      this.vy += this.gravity * 3.5;
       if (this.isGrounded) {
         this.vx = 0;
+        this.vy = 0;
         this._fireStompShockwave();
         this._enterState("STOMP_LAND");
       }
@@ -265,8 +293,15 @@ class BossEnemy {
       }
     }
 
-    // Gravity — only when not grounded
-    if (!this.isGrounded) this.vy += this.gravity;
+    // Gravity — managed per-state for JUMPING/HOVER/DROPPING; applied normally otherwise
+    if (
+      !this.isGrounded &&
+      this.state !== "HOVER" &&
+      this.state !== "DROPPING" &&
+      this.state !== "JUMPING"
+    ) {
+      this.vy += this.gravity;
+    }
 
     // Melee contact
     if (this.attackCooldown > 0) this.attackCooldown--;
@@ -301,17 +336,54 @@ class BossEnemy {
     }
   }
 
-  // Boss leaps toward the player — telegraph finishes, then this launches it
+  // Boss crouches then launches straight up — hover and drop logic is in update()
   _beginStomp(player) {
     this.DOMElement.classList.add("boss-stomp-crouch");
     setTimeout(() => {
       if (this.engine.bossDefeated) return;
       this.DOMElement.classList.remove("boss-stomp-crouch");
       this.jumpTarget = player.x + player.width / 2;
-      this.vy = -14; // strong upward launch
+      this.vy = -22; // high enough to clear ~8 tiles
+      this.vx = 0;
       this.isGrounded = false;
       this._enterState("JUMPING");
-    }, 300); // 300ms crouch before launching
+    }, 300);
+  }
+
+  // Spawns a warning shadow on the ground directly below the boss
+  _spawnShadowMarker() {
+    this._removeShadowMarker();
+    const el = document.createElement("div");
+    el.id = "stompShadow";
+    el.className = "stomp-shadow";
+    document.getElementById("stage").appendChild(el);
+    this._updateShadowMarker();
+  }
+
+  // Moves the shadow to stay below the boss's current x during hover
+  _updateShadowMarker() {
+    const el = document.getElementById("stompShadow");
+    if (!el) return;
+    // Find the floor below the boss by raycasting down from boss feet
+    const world = this.engine.world;
+    const bossFootX = this.x + this.width / 2;
+    let groundY = this.y + this.height;
+    for (
+      let py = this.y + this.height;
+      py < world.rows * world.tileSize;
+      py += 5
+    ) {
+      if (world.isTileSolidAt(bossFootX, py)) {
+        groundY = py;
+        break;
+      }
+    }
+    el.style.left = `${this.x + this.width / 2 - 45}px`;
+    el.style.top = `${groundY - 6}px`;
+  }
+
+  _removeShadowMarker() {
+    document.getElementById("stompShadow")?.remove();
   }
 
   // Shockwave on landing — low bullets spread left and right along the floor

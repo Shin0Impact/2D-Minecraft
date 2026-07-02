@@ -4,7 +4,7 @@ class PortalSystem {
   constructor(engine) {
     this.engine = engine;
     this.killCount = 0;
-    this.killsNeeded = 10;
+    this.killsNeeded = 5;
     this.diamondsNeeded = 5;
     this.diamondsFilled = 0;
     this.portalActive = false; // portal is visible and accepting diamonds

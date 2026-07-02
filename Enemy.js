@@ -138,10 +138,10 @@ class Enemy {
     // Detection ranges per type (horizontal pixels, only on same level)
     const detectionRange =
       {
-        zombie: 320,
-        skeleton: 400,
-        goblin: 500,
-      }[this.type] || 320;
+        zombie: 500,
+        skeleton: 620,
+        goblin: 750,
+      }[this.type] || 500;
 
     const canSee = sameLevel && hDist <= detectionRange;
 

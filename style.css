@@ -880,17 +880,13 @@ body[data-theme="snow"] .air {
   position: absolute;
   width: 30px;
   height: 30px;
-  font-size: 26px;
-  line-height: 30px;
-  text-align: center;
+  background-image: url("Assets/Skull.png");
+  background-size: cover;
+  image-rendering: pixelated;
   z-index: 9;
   pointer-events: none;
   animation: skullFloat 1.8s ease-in-out infinite alternate;
   filter: drop-shadow(0 0 6px rgba(155, 89, 182, 0.9));
-}
-
-.skull-minion::after {
-  content: "💀";
 }
 
 @keyframes skullFloat {
@@ -931,5 +927,32 @@ body[data-theme="snow"] .air {
   }
   100% {
     transform: scaleY(0.75) scaleX(1.2);
+  }
+}
+
+/* ─── Stomp warning shadow ───────────────────────── */
+.stomp-shadow {
+  position: absolute;
+  width: 90px;
+  height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse,
+    rgba(231, 76, 60, 0.7) 0%,
+    transparent 75%
+  );
+  pointer-events: none;
+  z-index: 7;
+  animation: shadowPulse 0.35s ease-in-out infinite alternate;
+}
+
+@keyframes shadowPulse {
+  from {
+    transform: scaleX(0.8);
+    opacity: 0.5;
+  }
+  to {
+    transform: scaleX(1.2);
+    opacity: 1;
   }
 }
