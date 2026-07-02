@@ -17,52 +17,77 @@ class CombatSystem {
     }
   }
 
-  // Sword swing — checks in front of player against enemies OR boss
-  executePlayerAttack() {
+  // Normal swing: 70px reach, 2 damage
+  // Charged swing (hold 500ms): 180px lunge, 4 damage, knockback doubled
+  executePlayerAttack(charged = false) {
     const engine = this.engine;
-    engine.audio.play("swing");
-    const attackRange = 40;
+    const player = engine.player;
+    const dir = player.facing === "right" ? 1 : -1;
+
+    const range = charged ? 180 : 70;
+    const height = charged ? 60 : 50;
+    const damage = charged ? 4 : 2;
+
     const attackBox = {
-      x:
-        engine.player.facing === "right"
-          ? engine.player.x + engine.player.width
-          : engine.player.x - attackRange,
-      y: engine.player.y + (engine.player.height - attackRange) / 2,
-      width: attackRange,
-      height: attackRange,
+      x: dir === 1 ? player.x + player.width : player.x - range,
+      y: player.y + (player.height - height) / 2,
+      width: range,
+      height: height,
     };
 
-    // Boss fight — hit the boss
+    engine.audio.play("swing");
+
+    if (charged) {
+      // Short lunge so the player closes the gap on release
+      player.vx = dir * 10;
+      player.vy = -2;
+    }
+
+    // Visual slash arc on stage
+    this._showSlash(attackBox, charged);
+
+    // Boss
     if (engine.bossFight && engine.boss) {
       if (engine.physics.checkCollision(attackBox, engine.boss)) {
-        engine.boss.takeDamage(2);
-        engine.boss.applyKnockback(engine.player.facing === "right" ? 1 : -1);
+        engine.boss.takeDamage(damage);
+        engine.boss.applyKnockback(dir);
       }
       return;
     }
 
-    // Hit skull minions (phase 2)
+    // Skull minions
     engine.skullMinions?.forEach((skull) => {
-      if (engine.physics.checkCollision(attackBox, skull)) {
-        skull.takeDamage(2);
-      }
+      if (engine.physics.checkCollision(attackBox, skull))
+        skull.takeDamage(damage);
     });
 
     // Normal enemies
     for (let i = engine.enemies.length - 1; i >= 0; i--) {
       const enemy = engine.enemies[i];
       if (engine.physics.checkCollision(attackBox, enemy)) {
-        enemy.health -= 2;
+        enemy.health -= damage;
         if (enemy.health > 0) {
-          enemy.applyKnockback(engine.player.facing === "right" ? 1 : -1);
+          enemy.applyKnockback(dir * (charged ? 2 : 1));
         } else {
           if (enemy._groanTimer) clearTimeout(enemy._groanTimer);
           enemy.DOMElement.remove();
           engine.enemies.splice(i, 1);
-          engine.portal?.onEnemyKilled(); // notify portal system
+          engine.portal?.onEnemyKilled();
         }
       }
     }
+  }
+
+  // Spawns a visible slash arc in the world that fades out instantly
+  _showSlash(box, charged) {
+    const el = document.createElement("div");
+    el.className = charged ? "slash-effect slash-charged" : "slash-effect";
+    el.style.left = `${box.x}px`;
+    el.style.top = `${box.y}px`;
+    el.style.width = `${box.width}px`;
+    el.style.height = `${box.height}px`;
+    document.getElementById("stage").appendChild(el);
+    el.addEventListener("animationend", () => el.remove(), { once: true });
   }
 
   // Called when an enemy touches or shoots the player
@@ -81,14 +106,12 @@ class CombatSystem {
       return;
     }
 
-    // Knock the player away from the attacker
     const knockDir =
       engine.player.x + engine.player.width / 2 < enemy.x + enemy.width / 2
         ? -1
         : 1;
     engine.player.applyKnockback(knockDir);
 
-    // Invincibility window so one hit doesn't chain into another
     engine.isInvincible = true;
     engine.player.DOMElement.classList.add("damaged");
     setTimeout(() => {

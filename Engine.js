@@ -52,6 +52,11 @@ class GameEngine {
     this.audio = new AudioSystem();
     this.portal = new PortalSystem(this);
 
+    this._swordDownTime = null;
+    this._bowDownTime = null;
+    this._bowAimX = 0;
+    this._bowAimY = 0;
+
     // Boss fight state — separate from normal gameplay
     this.bossFight = false;
     this.bossDefeated = false;
@@ -115,20 +120,45 @@ class GameEngine {
       const worldX = e.clientX - rect.left + this.cameraX;
       const worldY = e.clientY - rect.top + this.cameraY;
 
-      if (this.currentTool === "sword") this.combat.executePlayerAttack();
-      else if (this.currentTool === "bow")
-        this.projectile.firePlayerArrow(worldX, worldY);
-      else if (this.currentTool === "bucket") this.bucket.use(worldX, worldY);
-      else if (this.currentTool === "apple") this.mining.useApple();
-      else if (this.currentTool.startsWith("place-")) {
-        // Portal slots take priority over normal block placement when active
+      if (this.currentTool === "sword") {
+        this._swordDownTime = Date.now();
+      } else if (this.currentTool === "bow") {
+        // Record draw start and aim point — arrow fires on release after 500ms
+        this._bowDownTime = Date.now();
+        this._bowAimX = worldX;
+        this._bowAimY = worldY;
+      } else if (this.currentTool === "bucket") {
+        this.bucket.use(worldX, worldY);
+      } else if (this.currentTool === "apple") {
+        this.mining.useApple();
+      } else if (this.currentTool.startsWith("place-")) {
         if (
           this.currentTool === "place-diamond" &&
           this.portal.tryFillSlot(worldX, worldY)
         )
           return;
         this.mining.executeBlockPlacement(worldX, worldY);
-      } else this.mining.executeEnvironmentMining(worldX, worldY);
+      } else {
+        this.mining.executeEnvironmentMining(worldX, worldY);
+      }
+    });
+
+    // Sword and bow both fire on release
+    gw.addEventListener("mouseup", () => {
+      // Sword — hold 500ms+ for charged lunge
+      if (this.currentTool === "sword" && this._swordDownTime != null) {
+        const charged = Date.now() - this._swordDownTime >= 500;
+        this._swordDownTime = null;
+        this.combat.executePlayerAttack(charged);
+      }
+      // Bow — must hold 500ms to draw before releasing
+      if (this.currentTool === "bow" && this._bowDownTime != null) {
+        const held = Date.now() - this._bowDownTime;
+        if (held >= 500) {
+          this.projectile.firePlayerArrow(this._bowAimX, this._bowAimY);
+        }
+        this._bowDownTime = null;
+      }
     });
 
     gw.addEventListener("mousemove", (e) => this.hover.update(e, gw));
