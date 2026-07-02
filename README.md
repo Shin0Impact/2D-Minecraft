@@ -2,7 +2,6 @@
 
 A fully playable browser-based 2D Minecraft clone built with vanilla HTML, CSS, and JavaScript — no libraries, no canvas, just DOM elements.
 
-https://2d-mine-craft.netlify.app/
 <img width="1623" height="1253" alt="{AA633EE7-A480-44EC-8A72-E315607878E1}" src="https://github.com/user-attachments/assets/00339b3a-7858-455a-9aae-28f6e4d37572" />
 <img width="1544" height="1237" alt="{10F71A4B-7F37-4D1E-83CD-E0676301BB31}" src="https://github.com/user-attachments/assets/d016c562-14ab-4d4b-bd4c-9fd63fad12a8" />
 <img width="1569" height="1237" alt="{893CB147-3E85-4A69-8919-487B33107CE9}" src="https://github.com/user-attachments/assets/fbc9c46d-c0c4-4a1f-bc26-4de6800ffa57" />
